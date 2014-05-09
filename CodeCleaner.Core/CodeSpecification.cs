@@ -24,7 +24,7 @@ namespace CodeCleaner
 
         #region Properties
 
-        #region Public        
+        #region Public
 
         public IList<Order> Orders
         {
@@ -50,7 +50,7 @@ namespace CodeCleaner
 
         #region Methods
 
-        #region Private        
+        #region Private
 
         private static string GetAttribute(XmlNode node, string name, string defaultValue)
         {
@@ -64,6 +64,13 @@ namespace CodeCleaner
             return value;
         }
 
+        private static string GetAttribute(XmlNode node, string name)
+        {
+            XmlAttribute attr = node.Attributes[name];
+
+            return attr.IsNotNull() ? attr.Value : string.Empty;
+        }
+
         private static T GetAttributeEnum<T>(XmlNode node, string name, string defaultValue)
         {
             return GetAttribute(node, name, defaultValue).ParseEnum<T>();
@@ -73,26 +80,6 @@ namespace CodeCleaner
         {
             return GetAttribute(node, name).ParseEnum<T>();
         }
-
-        private static string GetAttribute(XmlNode node, string name)
-        {
-            XmlAttribute attr = node.Attributes[name];
-
-            return attr.IsNotNull() ? attr.Value : string.Empty;
-        }        
-
-        private static IList<RegionType> GetTypes(string types)
-        {
-            string[] splited = types.Split(new char[] { SEPARATOR_Value });
-            return splited.Where(p => p.IsNotNullOrEmpty()).Select(p => p.Trim()).Select(p => p.ParseEnum<RegionType>()).ToList();
-        }
-
-        private static IList<ModificatorType> GetModificators(string modificators)
-        {
-            string[] splited = modificators.Split(new char[] { SEPARATOR_Value });
-            return splited.Where(p => p.IsNotNullOrEmpty()).Select(p => p.Trim())
-                .Select(p => p.UpFirstChar().ParseEnum<ModificatorType>()).ToList();
-        }    
 
         private static int GetMaxRegionRepeatCount(string value)
         {
@@ -109,6 +96,13 @@ namespace CodeCleaner
             {
             	throw new InvalidOperationException("Invalid attribute value presented as integer." + ex.Message);
             }
+        }
+
+        private static IList<ModificatorType> GetModificators(string modificators)
+        {
+            string[] splited = modificators.Split(new char[] { SEPARATOR_Value });
+            return splited.Where(p => p.IsNotNullOrEmpty()).Select(p => p.Trim())
+                .Select(p => p.UpFirstChar().ParseEnum<ModificatorType>()).ToList();
         }
 
         private Order GetRegionOrder(XmlNode node, string orderRefName, Order defValue)
@@ -130,6 +124,32 @@ namespace CodeCleaner
             {
                 return defValue;
             }
+        }
+
+        private static IList<RegionType> GetTypes(string types)
+        {
+            string[] splited = types.Split(new char[] { SEPARATOR_Value });
+            return splited.Where(p => p.IsNotNullOrEmpty()).Select(p => p.Trim()).Select(p => p.ParseEnum<RegionType>()).ToList();
+        }
+
+        private Order LoadOrder(XmlNode node)
+        {
+            string orderName = GetAttribute(node, "Name");
+            SortType sort = GetAttributeEnum<SortType>(node, "Sort", SortType.None.ToString());
+
+            return new Order(orderName, LoadRegions(node.SelectNodes("Region"), sort, null));
+        }
+
+        private IList<Order> LoadOrders(XmlNodeList nodes)
+        {
+            List<Order> orders = new List<Order>();
+
+            foreach (XmlNode node in nodes)
+            {
+                orders.Add(LoadOrder(node));
+            }
+
+            return orders;
         }
 
         private Region LoadRegion(XmlNode node, SortType sort, Order typesOrder)
@@ -158,18 +178,6 @@ namespace CodeCleaner
             return regions;
         }
 
-        private IList<ISpecificationTarget> LoadTargets(XmlNodeList nodes)
-        {
-            List<ISpecificationTarget> targets = new List<ISpecificationTarget>();
-
-            foreach (XmlNode node in nodes)
-            {
-                targets.Add(LoadTarget(node));
-            }
-
-            return targets;
-        }
-
         private ISpecificationTarget LoadTarget(XmlNode node)
         {
             SortType sort = GetAttributeEnum<SortType>(node, "Sort", SortType.None.ToString());
@@ -185,24 +193,16 @@ namespace CodeCleaner
             return result;
         }
 
-        private IList<Order> LoadOrders(XmlNodeList nodes)
+        private IList<ISpecificationTarget> LoadTargets(XmlNodeList nodes)
         {
-            List<Order> orders = new List<Order>();
+            List<ISpecificationTarget> targets = new List<ISpecificationTarget>();
 
             foreach (XmlNode node in nodes)
             {
-                orders.Add(LoadOrder(node));
+                targets.Add(LoadTarget(node));
             }
 
-            return orders;
-        }
-
-        private Order LoadOrder(XmlNode node)
-        {
-            string orderName = GetAttribute(node, "Name");
-            SortType sort = GetAttributeEnum<SortType>(node, "Sort", SortType.None.ToString());
-
-            return new Order(orderName, LoadRegions(node.SelectNodes("Region"), sort, null));
+            return targets;
         }
 
         #endregion

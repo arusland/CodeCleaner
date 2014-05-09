@@ -15,10 +15,16 @@ namespace CodeCleaner
             Name = name;
             Regions = regions;
         }
-        
+
         #endregion
 
         #region Properties
+
+        public string Name
+        {
+            get;
+            private set;
+        }
 
         public IList<Region> Regions
         {
@@ -26,12 +32,6 @@ namespace CodeCleaner
             private set;
         }
 
-        public string Name
-        {
-            get;
-            private set;
-        }
-        
         #endregion
 
         #region Methods

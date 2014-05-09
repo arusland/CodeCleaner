@@ -17,10 +17,16 @@ namespace CodeCleaner.CodeBlocks
 
             Bottom = bottom;
         }
-        
+
         #endregion
 
         #region Properties
+
+        public string Bottom
+        {
+            get;
+            private set;
+        }
 
         public string Header
         {
@@ -30,12 +36,6 @@ namespace CodeCleaner.CodeBlocks
             }
         }
 
-        public string Bottom
-        {
-            get;
-            private set;
-        }
-        
         #endregion
 
         #region Methods
@@ -64,7 +64,7 @@ namespace CodeCleaner.CodeBlocks
 
             return result.ToString();
         }
-        
+
         #endregion
     }
 }

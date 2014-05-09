@@ -7,22 +7,7 @@ namespace CodeCleaner
 {
     public interface ISpecificationTarget
     {
-        SortType SortType
-        {
-            get;
-        }
-
         BindingType BindingType
-        {
-            get;
-        }
-
-        IList<Region> Regions
-        {
-            get;
-        }
-
-        string NameConvention
         {
             get;
         }
@@ -35,10 +20,25 @@ namespace CodeCleaner
             get;
         }
 
+        string NameConvention
+        {
+            get;
+        }
+
+        IList<Region> Regions
+        {
+            get;
+        }
+
         /// <summary>
         /// 
         /// </summary>
         bool RegionsOnly
+        {
+            get;
+        }
+
+        SortType SortType
         {
             get;
         }

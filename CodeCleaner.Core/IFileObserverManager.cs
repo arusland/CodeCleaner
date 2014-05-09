@@ -1,5 +1,4 @@
-﻿
-namespace CodeCleaner
+﻿namespace CodeCleaner
 {
     public interface IFileObserverManager
     {
@@ -8,10 +7,10 @@ namespace CodeCleaner
         /// </summary>
         bool IsChanged(string filePath);
 
-        void SetFile(string filePath);
-
         void RemoveFile(string filePath);
 
         void Save();
+
+        void SetFile(string filePath);
     }
 }

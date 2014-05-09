@@ -20,12 +20,24 @@ namespace CodeCleaner
 
             Load(fileName);
         }
-        
+
         #endregion
 
         #region Methods
-        
+
         #region Private
+
+        private static string GetAttribute(XmlNode node, string name)
+        {
+            XmlAttribute attr = node.Attributes[name];
+
+            if (attr.IsNotNull() && attr.Value.IsNotNullOrEmpty())
+            {
+                return attr.Value;
+            }
+
+            throw new InvalidOperationException(string.Format("Attribute '{0}' not found in node '{1}'", name, node.Name));
+        }
 
         private void Load(string fileName)
         {
@@ -74,55 +86,13 @@ namespace CodeCleaner
             return result;
         }
 
-        private static string GetAttribute(XmlNode node, string name)
-        {
-            XmlAttribute attr = node.Attributes[name];
-
-            if (attr.IsNotNull() && attr.Value.IsNotNullOrEmpty())
-            {
-                return attr.Value;
-            }
-
-            throw new InvalidOperationException(string.Format("Attribute '{0}' not found in node '{1}'", name, node.Name));
-        } 
-        
         #endregion
-        
+
         #endregion
 
         #region ICodeCleanerProject
 
-        public IList<string> ExcludeFilenamePatterns
-        {
-            get;
-            private set;
-        }
-
-        public IList<string> ExcludeContentPatterns
-        {
-            get;
-            private set;
-        }
-
-        public IList<string> IncludeFilenamePatterns
-        {
-            get;
-            private set;
-        }
-
-        public IList<string> IncludeContentPatterns
-        {
-            get;
-            private set;
-        }
-
-        public IList<string> FilesSearchPaths
-        {
-            get;
-            private set;
-        }
-
-        public string QuarantineOutputPath
+        public string BackUpOutputPath
         {
             get;
             private set;
@@ -134,7 +104,37 @@ namespace CodeCleaner
             private set;
         }
 
-        public string BackUpOutputPath
+        public IList<string> ExcludeContentPatterns
+        {
+            get;
+            private set;
+        }
+
+        public IList<string> ExcludeFilenamePatterns
+        {
+            get;
+            private set;
+        }
+
+        public IList<string> FilesSearchPaths
+        {
+            get;
+            private set;
+        }
+
+        public IList<string> IncludeContentPatterns
+        {
+            get;
+            private set;
+        }
+
+        public IList<string> IncludeFilenamePatterns
+        {
+            get;
+            private set;
+        }
+
+        public string QuarantineOutputPath
         {
             get;
             private set;

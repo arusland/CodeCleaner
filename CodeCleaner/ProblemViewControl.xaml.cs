@@ -27,36 +27,23 @@ namespace CodeCleaner
             _ClosedBrush = RootLayout.Background; //new SolidColorBrush(Color.FromRgb(197, 197, 197)); 
             _QuarantineBrush = new SolidColorBrush(Colors.OrangeRed);
             _OddBrush = new SolidColorBrush(Color.FromRgb(237, 252, 237));
-            
         }
-        
+
         #endregion
 
         #region Fields
 
-        private readonly Brush _OpenedBrush;
         private readonly Brush _ClosedBrush;
-        private readonly Brush _QuarantineBrush;
         private readonly Brush _OddBrush;
-        private Problem _Problem;        
-        
+        private readonly Brush _OpenedBrush;
+        private Problem _Problem;
+        private readonly Brush _QuarantineBrush;
+
         #endregion
 
         #region Properties
-        
+
         #region Public
-
-        public Problem Problem
-        {
-            get { return _Problem; }
-            set 
-            {
-                Checker.NotNull(value, "value");
-
-                _Problem = value;
-                UpdateView();
-            }
-        }
 
         public bool Expanded
         {
@@ -83,13 +70,25 @@ namespace CodeCleaner
                 checkBoxUse.IsChecked = value;
             }
         }
-        
-        #endregion        
-        
+
+        public Problem Problem
+        {
+            get { return _Problem; }
+            set 
+            {
+                Checker.NotNull(value, "value");
+
+                _Problem = value;
+                UpdateView();
+            }
+        }
+
+        #endregion
+
         #endregion
 
         #region Methods
-        
+
         #region Private
 
         private void UpdateView()
@@ -147,9 +146,9 @@ namespace CodeCleaner
                 gridList.Children.Add(textBlock);
             }
         }
-        
+
         #endregion
-        
+
         #endregion
 
         #region Event Handlers
@@ -157,7 +156,7 @@ namespace CodeCleaner
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateView();
-        }        
+        }
 
         private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
@@ -171,13 +170,13 @@ namespace CodeCleaner
                 OnViewSource(this, EventArgs.Empty);
             }
         }
-        
+
         #endregion
 
         #region Events
 
         public event EventHandler OnViewSource;
-        
+
         #endregion
     }
 }

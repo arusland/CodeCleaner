@@ -18,18 +18,18 @@ namespace CodeCleaner
     {
         #region Constants
 
+        private const string LOG_FILE_NAME_Format = "yyyyMMdd";
+        private const int MAX_BackUpSize = 1024 * 1024 * 50;
+        private const string PATH_OryginResourceRoot = @"\Orygin.ControlPanel.Warehouse\";
         private const string REGEX_Template = "^{0}$";
         private const string SEARCH_PATTERN_Cs = "*.cs";
         private const string SEARCH_PATTERN_Xaml = "*.xaml";
-        private const int MAX_BackUpSize = 1024 * 1024 * 50;
-        private const string LOG_FILE_NAME_Format = "yyyyMMdd";
         //xmlns:res="clr-namespace:Orygin.Resources;assembly=Orygin.Resources"
         private const string XAML_RESOURCE_DefaultNamespace = "clr-namespace:Orygin.Resources;assembly=Orygin.Resources";
+        private const string XAML_RESOURCE_NameSpaceKey = "xmlns:res";
         private const string XAML_RESOURCE_NamespaceTemplate = "clr-namespace:{0}";
         //Content="{x:Static Member=res:Resources.XAML_InventoryItemLabelPartNumber}"
         private const string XAML_RESOURCE_Template = "{{x:Static Member=res:Resources.{0}}}";
-        private const string XAML_RESOURCE_NameSpaceKey = "xmlns:res";
-        private const string PATH_OryginResourceRoot = @"\Orygin.ControlPanel.Warehouse\";
 
         #endregion
 
@@ -65,12 +65,12 @@ namespace CodeCleaner
 
         #region Fields
 
-        private BackgroundWorker _Worker;
         private bool _CheckQurantine;
+        private readonly IFileObserverManager _FileObserver;
+        private readonly Regex _RegExNormalAttribute;
+        private BackgroundWorker _Worker;
         private readonly string[] _XamlValueableAttributesList;
         private readonly string[] _XamlValueIgnoreList;
-        private readonly Regex _RegExNormalAttribute;
-        private readonly IFileObserverManager _FileObserver;
 
         #endregion
 
@@ -78,10 +78,12 @@ namespace CodeCleaner
 
         #region Public
 
-        public ICodeSpecification Specification
+        public bool IsWorking
         {
-            get;
-            private set;
+            get
+            {
+                return _Worker.IsBusy;
+            }
         }
 
         public ICodeParser Parser
@@ -96,12 +98,10 @@ namespace CodeCleaner
             private set;
         }
 
-        public bool IsWorking
+        public ICodeSpecification Specification
         {
-            get
-            {
-                return _Worker.IsBusy;
-            }
+            get;
+            private set;
         }
 
         #endregion
@@ -268,283 +268,143 @@ namespace CodeCleaner
 
         #region Private
 
-        private string GetProjectResourceFile(string path)
+        private static string BindingTypeToString(BindingType type)
         {
-            if (IsOryginResource(path))
+            return type.ToString();
+        }
+
+        private void CheckBlockName(ISpecificationTarget target, CodeBlock block, Problem result)
+        {
+            if (target.NameConvention.IsNotNullOrEmpty() && !Regex.IsMatch(block.Name, string.Format(REGEX_Template, target.NameConvention)))
             {
-                int index = path.IndexOf(PATH_OryginResourceRoot);
-
-                if (index >= 0)
-                {
-                    string result = Path.Combine(path.Substring(0, index + PATH_OryginResourceRoot.Length), @"Orygin.Resources\Resources.resx");
-
-                    return result;
-                }
-
-                throw new InvalidOperationException("Invalid path for Orygin: " + path);
-            }
-            else
-            {
-                if (File.Exists(path))
-                {
-                    path = Path.GetDirectoryName(path);
-                }
-
-                string curDir = path;
-
-                string propertiesFile = Path.Combine(path, @"Properties\Resources.resx");
-
-                if (File.Exists(propertiesFile))
-                {
-                    return propertiesFile;
-                }
-
-                string dirName = Path.GetDirectoryName(curDir);
-
-                if (dirName.Length > 3)
-                {
-                    return GetProjectResourceFile(dirName);
-                }
-
-                return null;
+                result.Issues.Add(new ProblemIssue(string.Format("{0} '{1}' breaks name convention '{2}'.",
+                    CodeBlockTypeToString(block.Type), block.Name, target.NameConvention), block.LineNumber));
             }
         }
 
-        private Problem CheckXamlFile(string filename)
+        private bool CheckClassBlock(CodeBlock blockClass, ISpecificationTarget target, Problem result)
         {
-            XmlDocument doc = new XmlDocument();
-            doc.Load(filename);
+            int index = 0;
+            CodeBlock notRegion = blockClass.ValuableInnerBlocks.FirstOrDefault(p => p.Type != CodeBlockType.Region);
 
-            Problem problem = new Problem(filename, true);
-
-            CheckXamlNode(doc.DocumentElement, problem);
-
-            return problem.Issues.Any() ? problem : null;
-        }
-
-        private static string GetClassName(XmlNode node)
-        {
-            var attrClass = node.Attributes["x:Class"];
-
-            if (attrClass.IsNotNull())
+            if (target.RegionsOnly && notRegion.IsNotNull())
             {
-                int index = attrClass.Value.LastIndexOf('.');
-
-                if (index >= 0)
-                {
-                    return attrClass.Value.Substring(index + 1);
-                }
-                else
-                {
-                    return attrClass.Value;
-                }
+                result.Issues.Add(new ProblemIssue(string.Format("{0} '{3}' can contain only regions. But found {1} '{2}'.",
+                            BindingTypeToString(target.BindingType), CodeBlockTypeToString(notRegion.Type), notRegion.Name, blockClass.Name),
+                            notRegion.LineNumber));
             }
 
-            return string.Empty;
-        }
+            IList<CodeBlock> regionBlocks = blockClass.ValuableInnerBlocks.Where(p => p.Type == CodeBlockType.Region).ToList();
+            IList<Region> existingRegions = target.Regions.Where(p => p.RegionNameConvention.IsNotNullOrEmpty() || regionBlocks.Any(r => r.Name == p.Name)).ToList();
 
-        private static bool IsOryginResource(string fileName)
-        {
-            return fileName.Contains(@"\Orygin.WinGUI\");
-        }
+            CheckRepeatedRegionNames(regionBlocks, result);
 
-        private static string GetResourceNamespace(string resourceFile)
-        {
-            if (resourceFile.Contains(@"\Orygin.Resources\Resources.resx"))
+            foreach (var region in existingRegions)
             {
-                return XAML_RESOURCE_DefaultNamespace;
-            }
-            else
-            {
-                string codeFile = Path.GetFileNameWithoutExtension(resourceFile) + ".Designer.cs";
-                codeFile = Path.Combine(Path.GetDirectoryName(resourceFile), codeFile);
-
-                if (File.Exists(codeFile))
+                if (index >= regionBlocks.Count)
                 {
-                    using (var sr = new StreamReader(codeFile))
+                    break;
+                }
+
+                if (region.RegionNameConvention.IsNullOrEmpty())
+                {
+                    if (regionBlocks[index].Name == region.Name)
                     {
-                        Regex rgx = new Regex(@"namespace\s+([\w\.]+)");
-                        string line = sr.ReadLine();
-
-                        while (line.IsNotNull())
+                        if (!CheckRegionBlock(regionBlocks[index], region, result, null))
                         {
-                            var match = rgx.Match(line);
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        CodeBlock foundRegion = regionBlocks.FirstOrDefault(p => p.Name == region.Name);
 
-                            if (match.Success)
+                        if (foundRegion.IsNotNull())
+                        {
+                            if (!CheckRegionBlock(foundRegion, region, result, null))
                             {
-                                return string.Format(XAML_RESOURCE_NamespaceTemplate, match.Groups[1].Value.Trim());
+                                return false;
                             }
+                        }
 
-                            line = sr.ReadLine();
+                        if (regionBlocks[index].Name.IsNotEmpty())
+                        {
+                            result.Issues.Add(new ProblemIssue(string.Format(ResourceStrings.PROBLEM_RegionExpectedButFound,
+                                CodeBlockTypeToString(blockClass.Type), blockClass.Name,
+                                region.Name, regionBlocks[index].Name), regionBlocks[index].LineNumber));
+                        }
+                        else
+                        {
+                            result.Issues.Add(new ProblemIssue(string.Format(ResourceStrings.PROBLEM_RegionEmptyNameFound,
+                                CodeBlockTypeToString(blockClass.Type), blockClass.Name,
+                                regionBlocks[index].Name), regionBlocks[index].LineNumber));
                         }
                     }
                 }
-
-                throw new InvalidOperationException(string.Format("File not ound: {0}", codeFile));
-            }
-        }
-
-        private void FixXamlFile(string filename)
-        {
-            string resourceFile = GetProjectResourceFile(filename);
-
-            if (resourceFile.IsNotNullOrEmpty())
-            {
-                IDictionary<string, string> values = new Dictionary<string, string>();
-                XmlDocument doc = new XmlDocument();
-                doc.Load(filename);
-                var resStrings = CodeCleaner.Helpers.ResourceHelper.GetLangSymbols(resourceFile);
-                string prefix = "XAML_" + GetClassName(doc.DocumentElement);
-                string resNamespace = GetResourceNamespace(resourceFile);
-
-                WrapXamlNode(doc.DocumentElement, (param) =>
-                {
-                    var nameAttr = param.Value;
-
-                    foreach (var attr in param.Key.Where(p => p.Value.IsNotEmpty()))
-                    {
-                        string valueName = MakeAttributeValueName(attr, nameAttr, prefix, (name) =>
-                            {
-                                return !values.ContainsKey(name) && !resStrings.ContainsKey(name);
-                            });
-
-                        values.Add(valueName, attr.Value);
-                        attr.Value = string.Format(XAML_RESOURCE_Template, valueName);
-                    }
-                });
-
-                if (values.Count > 0)
-                {
-                    if (doc.DocumentElement.Attributes[XAML_RESOURCE_NameSpaceKey].IsNull())
-                    {
-                        var attrRes = doc.CreateAttribute(XAML_RESOURCE_NameSpaceKey);
-                        attrRes.Value = resNamespace;
-                        doc.DocumentElement.Attributes.Append(attrRes);
-                    }
-
-                    CodeCleaner.Helpers.ResourceHelper.AddLangSymbols(resourceFile, values);
-                    doc.Save(filename);
-                }
-            }
-        }
-
-        private string MakeAttributeValueName(XmlAttribute attr, XmlAttribute attrName, string prefix, Func<string, bool> handler)
-        {
-            StringBuilder result = new StringBuilder(prefix);
-
-            if (attrName.IsNotNull())
-            {
-                result.Append(attrName.Value.UpperFirstChar());
-                result.Append(attr.Name);
-            }
-            else
-            {
-                XmlNode parentNode = attr.OwnerElement as XmlNode;
-
-                if (parentNode.IsNotNull() && !(parentNode.ParentNode is XmlDocument))
-                {
-                    result.Append(parentNode.Name.Replace(":", string.Empty));
-                }
-
-                result.Append(attr.Name);
-
-                var matches = Regex.Matches(attr.Value, @"\w[\w]+");
-
-                for (int i = 0; i < Math.Min(matches.Count, 3); i++)
-                {
-                    result.Append(matches[i].Value.UpperFirstChar());
-                }
-            }
-
-            int index = 0;
-
-            while (!handler(result.ToString()))
-            {
-                result.Append(++index);
-            }
-
-            return result.ToString();
-        }
-
-        private void CheckXamlNode(XmlNode node, Problem problem)
-        {
-            WrapXamlNode(node, (param) =>
-            {
-                var nameAttr = param.Value;
-
-                foreach (var attr in param.Key)
-                {
-                    StringBuilder message = new StringBuilder();
-                    IssueType issueType;
-
-                    if (attr.Value.IsNotEmpty())
-                    {
-                        message.AppendFormat("Attribute '{0}' with hardcoded string \"{1}\" found in node ", attr.Name, attr.Value);
-                        issueType = IssueType.XamlHardcodedStrings;
-                    }
-                    else
-                    {
-                        message.AppendFormat("Attribute '{0}' with EMPTY string found in node ", attr.Name);
-                        issueType = IssueType.Normal;
-                    }
-
-                    if (nameAttr.IsNotNull())
-                    {
-                        message.AppendFormat("'{0}' ('{1}')", nameAttr.Value, GetNodePath(node));
-                    }
-                    else
-                    {
-                        message.AppendFormat("'{0}'", GetNodePath(node));
-                    }
-
-                    problem.Issues.Add(new ProblemIssue(message.ToString(), 0, issueType));
-                }
-            });
-        }
-
-        private void WrapXamlNode(XmlNode node, Action<KeyValuePair<IEnumerable<XmlAttribute>, XmlAttribute>> handler)
-        {
-            if (node.Attributes.IsNotNull() && node.Attributes.Count > 0)
-            {
-                XmlAttribute nameAttr = node.Attributes["x:Name"] ?? node.Attributes["Name"];
-                var attrList = node.Attributes.OfType<XmlAttribute>().Where(p => _XamlValueableAttributesList.Contains(p.Name))
-                    .Where(p => !_RegExNormalAttribute.IsMatch(p.Value) && !_XamlValueIgnoreList.Contains(p.Value));
-
-                handler(new KeyValuePair<IEnumerable<XmlAttribute>, XmlAttribute>(attrList, nameAttr));
-            }
-
-            foreach (XmlNode childNode in node.ChildNodes)
-            {
-                WrapXamlNode(childNode, handler);
-            }
-        }
-
-        private string GetNodePath(XmlNode node)
-        {
-            List<XmlNode> list = new List<XmlNode>();
-            XmlNode parent = node;
-
-            while (parent.IsNotNull())
-            {
-                list.Insert(0, parent);
-                parent = parent.ParentNode;
-            }
-
-            StringBuilder result = new StringBuilder();
-
-            foreach (var nd in list)
-            {
-                if (result.Length > 0)
-                {
-                    result.AppendFormat("/{0}", nd.Name);
-                }
                 else
                 {
-                    result.Append(nd.Name);
+                    int maxIndex = region.MaxRegionRepeatCount <= 0 ? regionBlocks.Count - 1 : region.MaxRegionRepeatCount - 1;
+
+                    for (int i = index; i <= maxIndex; i++)
+                    {
+                        if (Regex.IsMatch(regionBlocks[i].Name, string.Format(REGEX_Template, region.RegionNameConvention)))
+                        {
+                            if (!CheckRegionBlock(regionBlocks[i], region, result, null))
+                            {
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            result.Issues.Add(new ProblemIssue(string.Format("Region '{2}' in {0} '{1}' breaks name convention '{3}'.",
+                               BindingTypeToString(target.BindingType), blockClass.Name, regionBlocks[i].Name, region.RegionNameConvention),
+                               regionBlocks[i].LineNumber));
+                        }
+                    }
+
+                    index = maxIndex;
+                }
+
+                index++;
+            }
+
+            if (index < regionBlocks.Count)
+            {
+                for (int i = index; i < regionBlocks.Count; i++)
+                {
+                    result.Issues.Add(new ProblemIssue(string.Format("{0} '{1}' cannot contain region '{2}' or one has wrong name.",
+                            BindingTypeToString(target.BindingType), blockClass.Name, regionBlocks[i].Name),
+                            regionBlocks[i].LineNumber));
                 }
             }
 
-            return result.ToString();
+            return true;
+        }
+
+        private bool CheckContainerBlock(CodeBlock block, Problem result)
+        {
+            if (block.Type == CodeBlockType.Class && Specification.Targets.Any(p => p.BindingType == BindingType.Class))
+            {
+                ISpecificationTarget classTarget = Specification.Targets.First(p => p.BindingType == BindingType.Class);
+
+                CheckBlockName(classTarget, block, result);
+
+                return CheckClassBlock(block, classTarget, result);
+            }
+            else if (block.Type == CodeBlockType.Interface && Specification.Targets.Any(p => p.BindingType == BindingType.Interface))
+            {
+                ISpecificationTarget interfaceTarget = Specification.Targets.First(p => p.BindingType == BindingType.Interface);
+
+                CheckBlockName(interfaceTarget, block, result);
+            }
+            else if (block.Type == CodeBlockType.Structure && Specification.Targets.Any(p => p.BindingType == BindingType.Struct))
+            {
+                ISpecificationTarget structTarget = Specification.Targets.First(p => p.BindingType == BindingType.Struct);
+
+                CheckBlockName(structTarget, block, result);
+            }
+
+            return true;
         }
 
         private Problem CheckFile(string filename)
@@ -583,120 +443,61 @@ namespace CodeCleaner
             return problem.Issues.Any() ? problem : null;
         }
 
-        private ISpecificationTarget GetTarget(CodeBlock block)
+        [Obsolete("Not used any more. Duplicates MS Code Contracts functionality")]
+        private void CheckMentalErrors(CodeBlock block, Problem problem)
         {
-            CodeBlock topTargetBlock = block.TopTargetBlock;
-            ISpecificationTarget target = Specification.Targets.FirstOrDefault(p => p.BindingType == FromCodeBlockType(topTargetBlock.Type));
-
-            return target;
-        }
-
-        private void FixOrderProblems(IList<Problem> problems)
-        {
-            foreach (Problem problem in problems)
+            if (block.Type == CodeBlockType.Constructor/* || block.Type == CodeBlockType.Method*/)
             {
-                FixOrderProblems(problem.RootBlock);
-            }
-        }
+                CodeBlockMethodBase methodBased = block.To<CodeBlockMethodBase>();
 
-        private void FixOrderProblems(CodeBlock block)
-        {
-            bool runOnChildren = false;
+                foreach (var arg in methodBased.Arguments)
+                {
+                    Match m = Regex.Match(arg, @"^[^\0]+[^\w](\w+)$");
 
-            switch (block.Type)
-            {
-                case CodeBlockType.Region:
-                case CodeBlockType.Interface:
-                case CodeBlockType.Structure:
-                    if (block.ValuableInnerBlocks.Any(p => p.Type == CodeBlockType.Region))
+                    if (!m.Success)
                     {
-                        runOnChildren = true;
+                        throw new InvalidOperationException("Invalid argument parsing.");
                     }
-                    else if (block.ValuableInnerBlocks.Any())
+
+                    string argName = m.Groups[1].Value;
+                    string pattern = string.Format(@"[^\w]{0}[^\w]", argName);
+
+                    if (!Regex.IsMatch(methodBased.Content, pattern))
                     {
-                        IEnumerable<CodeBlockType> existingBlockTypes = block.ValuableInnerBlocks.Select(p => p.Type).Distinct();
-                        CodeBlockType[] rightTypesOrder = GetRightTypesOrder(block, existingBlockTypes);
-
-                        if (rightTypesOrder.Length > 0)
+                        if (block.Type == CodeBlockType.Method)
                         {
-                            IList<CodeBlock> innerBlocks = block.InnerBlocks;
-                            ISpecificationTarget target = GetTarget(block);
-                            List<CodeBlock> fixedOrderedBlocks = new List<CodeBlock>();
-                            List<CodeBlock> lastCommentsAndDirectives = new List<CodeBlock>();
-                            var blockCommentsAndDirectives = new Dictionary<CodeBlock, IList<CodeBlock>>();
-                            CodeBlock lastBlock = null;
+                            CodeBlockMethod method = block.To<CodeBlockMethod>();
 
-                            for (int i = innerBlocks.Count - 1; i >= 0; i--)
+                            if (!method.IsAbstract)
                             {
-                                CodeBlock currentBlock = innerBlocks[i];
-
-                                if (currentBlock.Type != CodeBlockType.Comment && currentBlock.Type != CodeBlockType.SingleLineDirective)
-                                {
-                                    lastBlock = currentBlock;
-                                }
-                                else if (lastBlock.IsNotNull())
-                                {
-                                    if (!blockCommentsAndDirectives.ContainsKey(lastBlock))
-                                    {
-                                        blockCommentsAndDirectives.Add(lastBlock, new List<CodeBlock>());
-                                    }
-                                    blockCommentsAndDirectives[lastBlock].Insert(0, currentBlock);
-                                }
-                                else
-                                {
-                                    lastCommentsAndDirectives.Insert(0, currentBlock);
-                                }
+                                problem.Issues.Add(new ProblemIssue(string.Format("Argument '{0}' in method '{1}' not used",
+                                       argName, methodBased.Name), methodBased.LineNumber));
                             }
+                        }
+                        else if (block.Type == CodeBlockType.Constructor)
+                        {
+                            CodeBlockConstructor constructor = block.To<CodeBlockConstructor>();
 
-                            foreach (var bType in rightTypesOrder)
+                            if (!Regex.IsMatch(constructor.AdditionalCallName, pattern))
                             {
-                                var group = innerBlocks.Where(p => p.Type == bType);
-                                fixedOrderedBlocks.AddRange((target.SortType == SortType.Asc ? group.OrderBy(p => p.Name) : group.OrderByDescending(p => p.Name)).ToList());
+                                problem.Issues.Add(new ProblemIssue(string.Format("Argument '{0}' in constructor '{1}' not used",
+                                   argName, constructor.Name), constructor.LineNumber));
                             }
-
-                            foreach (var tblock in fixedOrderedBlocks.ToList())
-                            {
-                                if (blockCommentsAndDirectives.ContainsKey(tblock))
-                                {
-                                    int index = fixedOrderedBlocks.FindIndex(p => p == tblock);
-                                    fixedOrderedBlocks.InsertRange(index, blockCommentsAndDirectives[tblock]);
-                                }
-                            }
-
-                            fixedOrderedBlocks.AddRange(lastCommentsAndDirectives);
-
-                            block.InnerBlocks = fixedOrderedBlocks;
                         }
                     }
-                    break;
-                default:
-                    runOnChildren = true;
-                    break;
-            }
-
-            if (runOnChildren)
-            {
-                foreach (CodeBlock child in block.ValuableInnerBlocks)
-                {
-                    FixOrderProblems(child);
+                    else if (Regex.IsMatch(methodBased.Content, string.Format(@"[^\w]{0}\s*=\s*{0}[^w]", argName)))
+                    {
+                        problem.Issues.Add(new ProblemIssue(string.Format("Argument '{0}' in method '{1}' not assigned to itself.",
+                                       argName, methodBased.Name), methodBased.LineNumber));
+                    }
+                    //Debug.WriteLine(string.Format("In {0} found argument: {1}", constructor.Name, arg));
                 }
             }
-        }
 
-        private CodeBlockType[] GetRightTypesOrder(CodeBlock block, IEnumerable<CodeBlockType> existingBlockTypes)
-        {
-            ISpecificationTarget target = GetTarget(block);
-
-            if (target.IsNotNull() && target.TypesOrder.IsNotNull())
+            foreach (var child in block.ValuableInnerBlocks)
             {
-                CodeBlockType[] rightTypesOrder = target.TypesOrder.Regions
-                        .Select(p => FromRegionType(p.Types.First()))
-                        .Where(p => existingBlockTypes.Any(t => p == t)).ToArray();
-
-                return rightTypesOrder;
+                CheckMentalErrors(child, problem);
             }
-
-            return new CodeBlockType[0];
         }
 
         private void CheckOrderProblems(CodeBlock block, Problem problem)
@@ -852,202 +653,6 @@ namespace CodeCleaner
                 {
                     CheckOrderProblems(child, problem);
                 }
-            }
-        }
-
-        [Obsolete("Not used any more. Duplicates MS Code Contracts functionality")]
-        private void CheckMentalErrors(CodeBlock block, Problem problem)
-        {
-            if (block.Type == CodeBlockType.Constructor/* || block.Type == CodeBlockType.Method*/)
-            {
-                CodeBlockMethodBase methodBased = block.To<CodeBlockMethodBase>();
-
-                foreach (var arg in methodBased.Arguments)
-                {
-                    Match m = Regex.Match(arg, @"^[^\0]+[^\w](\w+)$");
-
-                    if (!m.Success)
-                    {
-                        throw new InvalidOperationException("Invalid argument parsing.");
-                    }
-
-                    string argName = m.Groups[1].Value;
-                    string pattern = string.Format(@"[^\w]{0}[^\w]", argName);
-
-                    if (!Regex.IsMatch(methodBased.Content, pattern))
-                    {
-                        if (block.Type == CodeBlockType.Method)
-                        {
-                            CodeBlockMethod method = block.To<CodeBlockMethod>();
-
-                            if (!method.IsAbstract)
-                            {
-                                problem.Issues.Add(new ProblemIssue(string.Format("Argument '{0}' in method '{1}' not used",
-                                       argName, methodBased.Name), methodBased.LineNumber));
-                            }
-                        }
-                        else if (block.Type == CodeBlockType.Constructor)
-                        {
-                            CodeBlockConstructor constructor = block.To<CodeBlockConstructor>();
-
-                            if (!Regex.IsMatch(constructor.AdditionalCallName, pattern))
-                            {
-                                problem.Issues.Add(new ProblemIssue(string.Format("Argument '{0}' in constructor '{1}' not used",
-                                   argName, constructor.Name), constructor.LineNumber));
-                            }
-                        }
-                    }
-                    else if (Regex.IsMatch(methodBased.Content, string.Format(@"[^\w]{0}\s*=\s*{0}[^w]", argName)))
-                    {
-                        problem.Issues.Add(new ProblemIssue(string.Format("Argument '{0}' in method '{1}' not assigned to itself.",
-                                       argName, methodBased.Name), methodBased.LineNumber));
-                    }
-                    //Debug.WriteLine(string.Format("In {0} found argument: {1}", constructor.Name, arg));
-                }
-            }
-
-            foreach (var child in block.ValuableInnerBlocks)
-            {
-                CheckMentalErrors(child, problem);
-            }
-        }
-
-        private bool CheckContainerBlock(CodeBlock block, Problem result)
-        {
-            if (block.Type == CodeBlockType.Class && Specification.Targets.Any(p => p.BindingType == BindingType.Class))
-            {
-                ISpecificationTarget classTarget = Specification.Targets.First(p => p.BindingType == BindingType.Class);
-
-                CheckBlockName(classTarget, block, result);
-
-                return CheckClassBlock(block, classTarget, result);
-            }
-            else if (block.Type == CodeBlockType.Interface && Specification.Targets.Any(p => p.BindingType == BindingType.Interface))
-            {
-                ISpecificationTarget interfaceTarget = Specification.Targets.First(p => p.BindingType == BindingType.Interface);
-
-                CheckBlockName(interfaceTarget, block, result);
-            }
-            else if (block.Type == CodeBlockType.Structure && Specification.Targets.Any(p => p.BindingType == BindingType.Struct))
-            {
-                ISpecificationTarget structTarget = Specification.Targets.First(p => p.BindingType == BindingType.Struct);
-
-                CheckBlockName(structTarget, block, result);
-            }
-
-            return true;
-        }
-
-        private void CheckBlockName(ISpecificationTarget target, CodeBlock block, Problem result)
-        {
-            if (target.NameConvention.IsNotNullOrEmpty() && !Regex.IsMatch(block.Name, string.Format(REGEX_Template, target.NameConvention)))
-            {
-                result.Issues.Add(new ProblemIssue(string.Format("{0} '{1}' breaks name convention '{2}'.",
-                    CodeBlockTypeToString(block.Type), block.Name, target.NameConvention), block.LineNumber));
-            }
-        }
-
-        private static BindingType FromCodeBlockType(CodeBlockType codeBlockType)
-        {
-            switch (codeBlockType)
-            {
-                case CodeBlockType.Interface:
-                    return BindingType.Interface;
-                case CodeBlockType.Class:
-                    return BindingType.Class;
-                case CodeBlockType.Structure:
-                    return BindingType.Struct;
-                case CodeBlockType.Namespace:
-                    return BindingType.Namespace;
-                default:
-                    return BindingType.None;
-            }
-        }
-
-        private static CodeBlockType FromRegionType(RegionType regionType)
-        {
-            switch (regionType)
-            {
-                case RegionType.Class:
-                    return CodeBlockType.Class;
-                case RegionType.Constructor:
-                    return CodeBlockType.Constructor;
-                case RegionType.Destructor:
-                    return CodeBlockType.Destructor;
-                case RegionType.Delegate:
-                    return CodeBlockType.Delegate;
-                case RegionType.Enum:
-                    return CodeBlockType.Enum;
-                case RegionType.Event:
-                    return CodeBlockType.Event;
-                case RegionType.RoutedEvent:
-                    return CodeBlockType.RoutedEvent;
-                case RegionType.Field:
-                    return CodeBlockType.Field;
-                case RegionType.Interface:
-                    return CodeBlockType.Interface;
-                case RegionType.Method:
-                    return CodeBlockType.Method;
-                case RegionType.Operator:
-                    return CodeBlockType.Operator;
-                case RegionType.Property:
-                    return CodeBlockType.Property;
-                case RegionType.IndexProperty:
-                    return CodeBlockType.IndexProperty;
-                case RegionType.DependencyProperty:
-                    return CodeBlockType.DependencyProperty;
-                case RegionType.Struct:
-                    return CodeBlockType.Structure;
-                case RegionType.Const:
-                    return CodeBlockType.Const;
-                default:
-                    throw new InvalidOperationException("Unsupported RegionType: " + regionType.ToString());
-            }
-        }
-
-        private static string CodeBlockTypeToString(CodeBlockType type)
-        {
-            if (type == CodeBlockType.IndexProperty)
-            {
-                return "Index Property";
-            }
-
-            return type.ToString().ToLower();
-        }
-
-        private static string CodeBlockModificatorToString(ModificatorType type)
-        {
-            return type.ToString().ToLower();
-        }
-
-        private static string BindingTypeToString(BindingType type)
-        {
-            return type.ToString();
-        }
-
-        /// <summary>
-        /// Checks if block can be used with Default modificator
-        /// </summary>
-        /// <param name="block"></param>
-        /// <returns></returns>
-        private static bool IsBlockCannotBeDafault(CodeBlock block)
-        {
-            if (block.Modificator != ModificatorType.Default)
-            {
-                return true;
-            }
-
-            switch (block.Type)
-            {
-                case CodeBlockType.Method:
-                    return block.To<CodeBlockMethod>().ExplicitInterfaceName.IsEmpty();
-                case CodeBlockType.Property:
-                case CodeBlockType.IndexProperty:
-                    return block.To<CodeBlockPropertyBase>().ExplicitInterfaceName.IsEmpty();
-                case CodeBlockType.Event:
-                    return block.To<CodeBlockEvent>().ExplicitInterfaceName.IsEmpty();
-                default:
-                    return true;
             }
         }
 
@@ -1214,103 +819,300 @@ namespace CodeCleaner
             }
         }
 
-        private bool CheckClassBlock(CodeBlock blockClass, ISpecificationTarget target, Problem result)
+        private Problem CheckXamlFile(string filename)
         {
-            int index = 0;
-            CodeBlock notRegion = blockClass.ValuableInnerBlocks.FirstOrDefault(p => p.Type != CodeBlockType.Region);
+            XmlDocument doc = new XmlDocument();
+            doc.Load(filename);
 
-            if (target.RegionsOnly && notRegion.IsNotNull())
+            Problem problem = new Problem(filename, true);
+
+            CheckXamlNode(doc.DocumentElement, problem);
+
+            return problem.Issues.Any() ? problem : null;
+        }
+
+        private void CheckXamlNode(XmlNode node, Problem problem)
+        {
+            WrapXamlNode(node, (param) =>
             {
-                result.Issues.Add(new ProblemIssue(string.Format("{0} '{3}' can contain only regions. But found {1} '{2}'.",
-                            BindingTypeToString(target.BindingType), CodeBlockTypeToString(notRegion.Type), notRegion.Name, blockClass.Name),
-                            notRegion.LineNumber));
-            }
+                var nameAttr = param.Value;
 
-            IList<CodeBlock> regionBlocks = blockClass.ValuableInnerBlocks.Where(p => p.Type == CodeBlockType.Region).ToList();
-            IList<Region> existingRegions = target.Regions.Where(p => p.RegionNameConvention.IsNotNullOrEmpty() || regionBlocks.Any(r => r.Name == p.Name)).ToList();
-
-            CheckRepeatedRegionNames(regionBlocks, result);
-
-            foreach (var region in existingRegions)
-            {
-                if (index >= regionBlocks.Count)
+                foreach (var attr in param.Key)
                 {
-                    break;
-                }
+                    StringBuilder message = new StringBuilder();
+                    IssueType issueType;
 
-                if (region.RegionNameConvention.IsNullOrEmpty())
-                {
-                    if (regionBlocks[index].Name == region.Name)
+                    if (attr.Value.IsNotEmpty())
                     {
-                        if (!CheckRegionBlock(regionBlocks[index], region, result, null))
-                        {
-                            return false;
-                        }
+                        message.AppendFormat("Attribute '{0}' with hardcoded string \"{1}\" found in node ", attr.Name, attr.Value);
+                        issueType = IssueType.XamlHardcodedStrings;
                     }
                     else
                     {
-                        CodeBlock foundRegion = regionBlocks.FirstOrDefault(p => p.Name == region.Name);
-
-                        if (foundRegion.IsNotNull())
-                        {
-                            if (!CheckRegionBlock(foundRegion, region, result, null))
-                            {
-                                return false;
-                            }
-                        }
-
-                        if (regionBlocks[index].Name.IsNotEmpty())
-                        {
-                            result.Issues.Add(new ProblemIssue(string.Format(ResourceStrings.PROBLEM_RegionExpectedButFound,
-                                CodeBlockTypeToString(blockClass.Type), blockClass.Name,
-                                region.Name, regionBlocks[index].Name), regionBlocks[index].LineNumber));
-                        }
-                        else
-                        {
-                            result.Issues.Add(new ProblemIssue(string.Format(ResourceStrings.PROBLEM_RegionEmptyNameFound,
-                                CodeBlockTypeToString(blockClass.Type), blockClass.Name,
-                                regionBlocks[index].Name), regionBlocks[index].LineNumber));
-                        }
+                        message.AppendFormat("Attribute '{0}' with EMPTY string found in node ", attr.Name);
+                        issueType = IssueType.Normal;
                     }
+
+                    if (nameAttr.IsNotNull())
+                    {
+                        message.AppendFormat("'{0}' ('{1}')", nameAttr.Value, GetNodePath(node));
+                    }
+                    else
+                    {
+                        message.AppendFormat("'{0}'", GetNodePath(node));
+                    }
+
+                    problem.Issues.Add(new ProblemIssue(message.ToString(), 0, issueType));
+                }
+            });
+        }
+
+        private static string CodeBlockModificatorToString(ModificatorType type)
+        {
+            return type.ToString().ToLower();
+        }
+
+        private static string CodeBlockTypeToString(CodeBlockType type)
+        {
+            if (type == CodeBlockType.IndexProperty)
+            {
+                return "Index Property";
+            }
+
+            return type.ToString().ToLower();
+        }
+
+        private void CreateDirectory(string path)
+        {
+            DirectoryInfo dirInfo = new DirectoryInfo(path);
+
+            if (!dirInfo.Exists)
+            {
+                if (dirInfo.Parent.Exists)
+                {
+                    dirInfo.Create();
                 }
                 else
                 {
-                    int maxIndex = region.MaxRegionRepeatCount <= 0 ? regionBlocks.Count - 1 : region.MaxRegionRepeatCount - 1;
+                    CreateDirectory(dirInfo.Parent.FullName);
+                    dirInfo.Create();
+                }
+            }
+        }
 
-                    for (int i = index; i <= maxIndex; i++)
+        private void FixOrderProblems(IList<Problem> problems)
+        {
+            foreach (Problem problem in problems)
+            {
+                FixOrderProblems(problem.RootBlock);
+            }
+        }
+
+        private void FixOrderProblems(CodeBlock block)
+        {
+            bool runOnChildren = false;
+
+            switch (block.Type)
+            {
+                case CodeBlockType.Region:
+                case CodeBlockType.Interface:
+                case CodeBlockType.Structure:
+                    if (block.ValuableInnerBlocks.Any(p => p.Type == CodeBlockType.Region))
                     {
-                        if (Regex.IsMatch(regionBlocks[i].Name, string.Format(REGEX_Template, region.RegionNameConvention)))
+                        runOnChildren = true;
+                    }
+                    else if (block.ValuableInnerBlocks.Any())
+                    {
+                        IEnumerable<CodeBlockType> existingBlockTypes = block.ValuableInnerBlocks.Select(p => p.Type).Distinct();
+                        CodeBlockType[] rightTypesOrder = GetRightTypesOrder(block, existingBlockTypes);
+
+                        if (rightTypesOrder.Length > 0)
                         {
-                            if (!CheckRegionBlock(regionBlocks[i], region, result, null))
+                            IList<CodeBlock> innerBlocks = block.InnerBlocks;
+                            ISpecificationTarget target = GetTarget(block);
+                            List<CodeBlock> fixedOrderedBlocks = new List<CodeBlock>();
+                            List<CodeBlock> lastCommentsAndDirectives = new List<CodeBlock>();
+                            var blockCommentsAndDirectives = new Dictionary<CodeBlock, IList<CodeBlock>>();
+                            CodeBlock lastBlock = null;
+
+                            for (int i = innerBlocks.Count - 1; i >= 0; i--)
                             {
-                                return false;
+                                CodeBlock currentBlock = innerBlocks[i];
+
+                                if (currentBlock.Type != CodeBlockType.Comment && currentBlock.Type != CodeBlockType.SingleLineDirective)
+                                {
+                                    lastBlock = currentBlock;
+                                }
+                                else if (lastBlock.IsNotNull())
+                                {
+                                    if (!blockCommentsAndDirectives.ContainsKey(lastBlock))
+                                    {
+                                        blockCommentsAndDirectives.Add(lastBlock, new List<CodeBlock>());
+                                    }
+                                    blockCommentsAndDirectives[lastBlock].Insert(0, currentBlock);
+                                }
+                                else
+                                {
+                                    lastCommentsAndDirectives.Insert(0, currentBlock);
+                                }
                             }
-                        }
-                        else
-                        {
-                            result.Issues.Add(new ProblemIssue(string.Format("Region '{2}' in {0} '{1}' breaks name convention '{3}'.",
-                               BindingTypeToString(target.BindingType), blockClass.Name, regionBlocks[i].Name, region.RegionNameConvention),
-                               regionBlocks[i].LineNumber));
+
+                            foreach (var bType in rightTypesOrder)
+                            {
+                                var group = innerBlocks.Where(p => p.Type == bType);
+                                fixedOrderedBlocks.AddRange((target.SortType == SortType.Asc ? group.OrderBy(p => p.Name) : group.OrderByDescending(p => p.Name)).ToList());
+                            }
+
+                            foreach (var tblock in fixedOrderedBlocks.ToList())
+                            {
+                                if (blockCommentsAndDirectives.ContainsKey(tblock))
+                                {
+                                    int index = fixedOrderedBlocks.FindIndex(p => p == tblock);
+                                    fixedOrderedBlocks.InsertRange(index, blockCommentsAndDirectives[tblock]);
+                                }
+                            }
+
+                            fixedOrderedBlocks.AddRange(lastCommentsAndDirectives);
+
+                            block.InnerBlocks = fixedOrderedBlocks;
                         }
                     }
-
-                    index = maxIndex;
-                }
-
-                index++;
+                    break;
+                default:
+                    runOnChildren = true;
+                    break;
             }
 
-            if (index < regionBlocks.Count)
+            if (runOnChildren)
             {
-                for (int i = index; i < regionBlocks.Count; i++)
+                foreach (CodeBlock child in block.ValuableInnerBlocks)
                 {
-                    result.Issues.Add(new ProblemIssue(string.Format("{0} '{1}' cannot contain region '{2}' or one has wrong name.",
-                            BindingTypeToString(target.BindingType), blockClass.Name, regionBlocks[i].Name),
-                            regionBlocks[i].LineNumber));
+                    FixOrderProblems(child);
+                }
+            }
+        }
+
+        private void FixXamlFile(string filename)
+        {
+            string resourceFile = GetProjectResourceFile(filename);
+
+            if (resourceFile.IsNotNullOrEmpty())
+            {
+                IDictionary<string, string> values = new Dictionary<string, string>();
+                XmlDocument doc = new XmlDocument();
+                doc.Load(filename);
+                var resStrings = CodeCleaner.Helpers.ResourceHelper.GetLangSymbols(resourceFile);
+                string prefix = "XAML_" + GetClassName(doc.DocumentElement);
+                string resNamespace = GetResourceNamespace(resourceFile);
+
+                WrapXamlNode(doc.DocumentElement, (param) =>
+                {
+                    var nameAttr = param.Value;
+
+                    foreach (var attr in param.Key.Where(p => p.Value.IsNotEmpty()))
+                    {
+                        string valueName = MakeAttributeValueName(attr, nameAttr, prefix, (name) =>
+                            {
+                                return !values.ContainsKey(name) && !resStrings.ContainsKey(name);
+                            });
+
+                        values.Add(valueName, attr.Value);
+                        attr.Value = string.Format(XAML_RESOURCE_Template, valueName);
+                    }
+                });
+
+                if (values.Count > 0)
+                {
+                    if (doc.DocumentElement.Attributes[XAML_RESOURCE_NameSpaceKey].IsNull())
+                    {
+                        var attrRes = doc.CreateAttribute(XAML_RESOURCE_NameSpaceKey);
+                        attrRes.Value = resNamespace;
+                        doc.DocumentElement.Attributes.Append(attrRes);
+                    }
+
+                    CodeCleaner.Helpers.ResourceHelper.AddLangSymbols(resourceFile, values);
+                    doc.Save(filename);
+                }
+            }
+        }
+
+        private static BindingType FromCodeBlockType(CodeBlockType codeBlockType)
+        {
+            switch (codeBlockType)
+            {
+                case CodeBlockType.Interface:
+                    return BindingType.Interface;
+                case CodeBlockType.Class:
+                    return BindingType.Class;
+                case CodeBlockType.Structure:
+                    return BindingType.Struct;
+                case CodeBlockType.Namespace:
+                    return BindingType.Namespace;
+                default:
+                    return BindingType.None;
+            }
+        }
+
+        private static CodeBlockType FromRegionType(RegionType regionType)
+        {
+            switch (regionType)
+            {
+                case RegionType.Class:
+                    return CodeBlockType.Class;
+                case RegionType.Constructor:
+                    return CodeBlockType.Constructor;
+                case RegionType.Destructor:
+                    return CodeBlockType.Destructor;
+                case RegionType.Delegate:
+                    return CodeBlockType.Delegate;
+                case RegionType.Enum:
+                    return CodeBlockType.Enum;
+                case RegionType.Event:
+                    return CodeBlockType.Event;
+                case RegionType.RoutedEvent:
+                    return CodeBlockType.RoutedEvent;
+                case RegionType.Field:
+                    return CodeBlockType.Field;
+                case RegionType.Interface:
+                    return CodeBlockType.Interface;
+                case RegionType.Method:
+                    return CodeBlockType.Method;
+                case RegionType.Operator:
+                    return CodeBlockType.Operator;
+                case RegionType.Property:
+                    return CodeBlockType.Property;
+                case RegionType.IndexProperty:
+                    return CodeBlockType.IndexProperty;
+                case RegionType.DependencyProperty:
+                    return CodeBlockType.DependencyProperty;
+                case RegionType.Struct:
+                    return CodeBlockType.Structure;
+                case RegionType.Const:
+                    return CodeBlockType.Const;
+                default:
+                    throw new InvalidOperationException("Unsupported RegionType: " + regionType.ToString());
+            }
+        }
+
+        private static string GetClassName(XmlNode node)
+        {
+            var attrClass = node.Attributes["x:Class"];
+
+            if (attrClass.IsNotNull())
+            {
+                int index = attrClass.Value.LastIndexOf('.');
+
+                if (index >= 0)
+                {
+                    return attrClass.Value.Substring(index + 1);
+                }
+                else
+                {
+                    return attrClass.Value;
                 }
             }
 
-            return true;
+            return string.Empty;
         }
 
         private IList<string> GetFileNames(string forceSearchPath, string searchPattern)
@@ -1368,6 +1170,224 @@ namespace CodeCleaner
             return result;
         }
 
+        private string GetNodePath(XmlNode node)
+        {
+            List<XmlNode> list = new List<XmlNode>();
+            XmlNode parent = node;
+
+            while (parent.IsNotNull())
+            {
+                list.Insert(0, parent);
+                parent = parent.ParentNode;
+            }
+
+            StringBuilder result = new StringBuilder();
+
+            foreach (var nd in list)
+            {
+                if (result.Length > 0)
+                {
+                    result.AppendFormat("/{0}", nd.Name);
+                }
+                else
+                {
+                    result.Append(nd.Name);
+                }
+            }
+
+            return result.ToString();
+        }
+
+        private string GetProjectResourceFile(string path)
+        {
+            if (IsOryginResource(path))
+            {
+                int index = path.IndexOf(PATH_OryginResourceRoot);
+
+                if (index >= 0)
+                {
+                    string result = Path.Combine(path.Substring(0, index + PATH_OryginResourceRoot.Length), @"Orygin.Resources\Resources.resx");
+
+                    return result;
+                }
+
+                throw new InvalidOperationException("Invalid path for Orygin: " + path);
+            }
+            else
+            {
+                if (File.Exists(path))
+                {
+                    path = Path.GetDirectoryName(path);
+                }
+
+                string curDir = path;
+
+                string propertiesFile = Path.Combine(path, @"Properties\Resources.resx");
+
+                if (File.Exists(propertiesFile))
+                {
+                    return propertiesFile;
+                }
+
+                string dirName = Path.GetDirectoryName(curDir);
+
+                if (dirName.Length > 3)
+                {
+                    return GetProjectResourceFile(dirName);
+                }
+
+                return null;
+            }
+        }
+
+        private static string GetResourceNamespace(string resourceFile)
+        {
+            if (resourceFile.Contains(@"\Orygin.Resources\Resources.resx"))
+            {
+                return XAML_RESOURCE_DefaultNamespace;
+            }
+            else
+            {
+                string codeFile = Path.GetFileNameWithoutExtension(resourceFile) + ".Designer.cs";
+                codeFile = Path.Combine(Path.GetDirectoryName(resourceFile), codeFile);
+
+                if (File.Exists(codeFile))
+                {
+                    using (var sr = new StreamReader(codeFile))
+                    {
+                        Regex rgx = new Regex(@"namespace\s+([\w\.]+)");
+                        string line = sr.ReadLine();
+
+                        while (line.IsNotNull())
+                        {
+                            var match = rgx.Match(line);
+
+                            if (match.Success)
+                            {
+                                return string.Format(XAML_RESOURCE_NamespaceTemplate, match.Groups[1].Value.Trim());
+                            }
+
+                            line = sr.ReadLine();
+                        }
+                    }
+                }
+
+                throw new InvalidOperationException(string.Format("File not ound: {0}", codeFile));
+            }
+        }
+
+        private CodeBlockType[] GetRightTypesOrder(CodeBlock block, IEnumerable<CodeBlockType> existingBlockTypes)
+        {
+            ISpecificationTarget target = GetTarget(block);
+
+            if (target.IsNotNull() && target.TypesOrder.IsNotNull())
+            {
+                CodeBlockType[] rightTypesOrder = target.TypesOrder.Regions
+                        .Select(p => FromRegionType(p.Types.First()))
+                        .Where(p => existingBlockTypes.Any(t => p == t)).ToArray();
+
+                return rightTypesOrder;
+            }
+
+            return new CodeBlockType[0];
+        }
+
+        private ISpecificationTarget GetTarget(CodeBlock block)
+        {
+            CodeBlock topTargetBlock = block.TopTargetBlock;
+            ISpecificationTarget target = Specification.Targets.FirstOrDefault(p => p.BindingType == FromCodeBlockType(topTargetBlock.Type));
+
+            return target;
+        }
+
+        /// <summary>
+        /// Checks if block can be used with Default modificator
+        /// </summary>
+        /// <param name="block"></param>
+        /// <returns></returns>
+        private static bool IsBlockCannotBeDafault(CodeBlock block)
+        {
+            if (block.Modificator != ModificatorType.Default)
+            {
+                return true;
+            }
+
+            switch (block.Type)
+            {
+                case CodeBlockType.Method:
+                    return block.To<CodeBlockMethod>().ExplicitInterfaceName.IsEmpty();
+                case CodeBlockType.Property:
+                case CodeBlockType.IndexProperty:
+                    return block.To<CodeBlockPropertyBase>().ExplicitInterfaceName.IsEmpty();
+                case CodeBlockType.Event:
+                    return block.To<CodeBlockEvent>().ExplicitInterfaceName.IsEmpty();
+                default:
+                    return true;
+            }
+        }
+
+        private static bool IsOryginResource(string fileName)
+        {
+            return fileName.Contains(@"\Orygin.WinGUI\");
+        }
+
+        private string MakeAttributeValueName(XmlAttribute attr, XmlAttribute attrName, string prefix, Func<string, bool> handler)
+        {
+            StringBuilder result = new StringBuilder(prefix);
+
+            if (attrName.IsNotNull())
+            {
+                result.Append(attrName.Value.UpperFirstChar());
+                result.Append(attr.Name);
+            }
+            else
+            {
+                XmlNode parentNode = attr.OwnerElement as XmlNode;
+
+                if (parentNode.IsNotNull() && !(parentNode.ParentNode is XmlDocument))
+                {
+                    result.Append(parentNode.Name.Replace(":", string.Empty));
+                }
+
+                result.Append(attr.Name);
+
+                var matches = Regex.Matches(attr.Value, @"\w[\w]+");
+
+                for (int i = 0; i < Math.Min(matches.Count, 3); i++)
+                {
+                    result.Append(matches[i].Value.UpperFirstChar());
+                }
+            }
+
+            int index = 0;
+
+            while (!handler(result.ToString()))
+            {
+                result.Append(++index);
+            }
+
+            return result.ToString();
+        }
+
+        private void NotifyByException(CodeCleanerException exception)
+        {
+            Problem problem = new Problem(exception.Filename);
+
+            problem.Issues.Add(new ProblemIssue(exception.Message, exception.Line));
+
+            NotifyProblem(problem);
+        }
+
+        private void NotifyProblem(Problem problem)
+        {
+            _Worker.ReportProgress(-1, problem);
+        }
+
+        private void NotifyProgress(string filename, int index, int count)
+        {
+            _Worker.ReportProgress(Math.Max(1, index * 100 / count), filename);
+        }
+
         /// <summary>
         /// Sends file if file has errors while parsing
         /// </summary>
@@ -1400,41 +1420,21 @@ namespace CodeCleaner
             NotifyProblem(problem);
         }
 
-        private void CreateDirectory(string path)
+        private void WrapXamlNode(XmlNode node, Action<KeyValuePair<IEnumerable<XmlAttribute>, XmlAttribute>> handler)
         {
-            DirectoryInfo dirInfo = new DirectoryInfo(path);
-
-            if (!dirInfo.Exists)
+            if (node.Attributes.IsNotNull() && node.Attributes.Count > 0)
             {
-                if (dirInfo.Parent.Exists)
-                {
-                    dirInfo.Create();
-                }
-                else
-                {
-                    CreateDirectory(dirInfo.Parent.FullName);
-                    dirInfo.Create();
-                }
+                XmlAttribute nameAttr = node.Attributes["x:Name"] ?? node.Attributes["Name"];
+                var attrList = node.Attributes.OfType<XmlAttribute>().Where(p => _XamlValueableAttributesList.Contains(p.Name))
+                    .Where(p => !_RegExNormalAttribute.IsMatch(p.Value) && !_XamlValueIgnoreList.Contains(p.Value));
+
+                handler(new KeyValuePair<IEnumerable<XmlAttribute>, XmlAttribute>(attrList, nameAttr));
             }
-        }
 
-        private void NotifyByException(CodeCleanerException exception)
-        {
-            Problem problem = new Problem(exception.Filename);
-
-            problem.Issues.Add(new ProblemIssue(exception.Message, exception.Line));
-
-            NotifyProblem(problem);
-        }
-
-        private void NotifyProblem(Problem problem)
-        {
-            _Worker.ReportProgress(-1, problem);
-        }
-
-        private void NotifyProgress(string filename, int index, int count)
-        {
-            _Worker.ReportProgress(Math.Max(1, index * 100 / count), filename);
+            foreach (XmlNode childNode in node.ChildNodes)
+            {
+                WrapXamlNode(childNode, handler);
+            }
         }
 
         #endregion
@@ -1443,39 +1443,133 @@ namespace CodeCleaner
 
         #region Event Handlers
 
-        private void Worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void BackUpFile(string filePath)
         {
-            if (e.ProgressPercentage >= 0)
+            string onlyFileName = Path.GetFileNameWithoutExtension(filePath);
+            string fileExt = Path.GetExtension(filePath);
+            DateTime now = DateTime.Now;
+            string newFilePath = Path.Combine(Project.BackUpOutputPath, string.Format("{0}_{1}{2}", now.ToString(LOG_FILE_NAME_Format), onlyFileName, fileExt));
+            int index = 1;
+
+            while (File.Exists(newFilePath))
             {
-                if (OnProgressChanged.IsNotNull())
+                newFilePath = Path.Combine(Project.BackUpOutputPath,
+                    string.Format("{0}_{1}[{3}]{2}", now.ToString(LOG_FILE_NAME_Format), onlyFileName, fileExt, index++));
+            }
+
+            if (!Directory.Exists(Project.BackUpOutputPath))
+            {
+                Directory.CreateDirectory(Project.BackUpOutputPath);
+            }
+
+            File.Copy(filePath, newFilePath, true);
+            File.SetLastWriteTime(newFilePath, DateTime.Now);
+
+            DeleteOldBackUpFiles();
+        }
+
+        private bool CheckAndNotifyFile(string currentFilename)
+        {
+            if (!Parser.Parse(currentFilename))
+            {
+                if (_Worker.CancellationPending)
                 {
-                    OnProgressChanged(this, new NewProgressChangedEventArgs(e.UserState.ToWithNull<string>(), e.ProgressPercentage));
+                    return false;
+                }
+
+                if (Parser.HasUnrecognisedBlocks)
+                {
+                    SendToQuarantine(currentFilename, new InvalidOperationException("Unrecognised blocks found."));
+                    return true;
+                }
+
+                Problem problem = CheckFile(currentFilename);
+
+                if (_Worker.CancellationPending)
+                {
+                    return false;
+                }
+
+                if (problem.IsNotNull())
+                {
+                    _FileObserver.RemoveFile(currentFilename);
+                    NotifyProblem(problem);
+                }
+                else
+                {
+                    _FileObserver.SetFile(currentFilename);
                 }
             }
             else
             {
-                if (OnNewProblem.IsNotNull())
+                _FileObserver.SetFile(currentFilename);
+            }
+
+            return true;
+        }
+
+        private bool CheckAndNotifyXamlFile(string fileName)
+        {
+            if (_Worker.CancellationPending)
+            {
+                return false;
+            }
+
+            Problem problem = CheckXamlFile(fileName);
+
+            if (_Worker.CancellationPending)
+            {
+                return false;
+            }
+
+            if (problem.IsNotNull())
+            {
+                _FileObserver.RemoveFile(fileName);
+                NotifyProblem(problem);
+            }
+            else
+            {
+                _FileObserver.SetFile(fileName);
+            }
+
+            return true;
+        }
+
+        private void DeleteOldBackUpFiles()
+        {
+            if (Directory.Exists(Project.BackUpOutputPath))
+            {
+                var files = Directory.GetFiles(Project.BackUpOutputPath).Select(p => new FileInfo(p)).OrderBy(p => p.LastWriteTime).ToList();
+                long allSize = files.Select(p => p.Length).Sum();
+
+                if (allSize > MAX_BackUpSize)
                 {
-                    OnNewProblem(this, new NewProblemEventArgs(e.UserState.To<Problem>()));
+                    foreach (var finfo in files)
+                    {
+                        try
+                        {
+                            finfo.Delete();
+                            allSize -= finfo.Length;
+
+                            if (allSize <= MAX_BackUpSize)
+                            {
+                                break;
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            Debug.WriteLine("EXCEPTION: " + ex.ToString());
+                        }
+                    }
                 }
             }
         }
 
-        private void Worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        private void SaveContent(string filename, string newContent)
         {
-            if (e.Error.IsNull())
+            using (StreamWriter sw = new StreamWriter(filename, false, Encoding.UTF8))
             {
-                if (OnProgressComplete.IsNotNull())
-                {
-                    OnProgressComplete(this, new ProgressCompleteEventArgs(e.Cancelled, (int)e.Result));
-                }
-            }
-            else
-            {
-                if (OnProgressComplete.IsNotNull())
-                {
-                    OnProgressComplete(this, new ProgressCompleteEventArgs(e.Error));
-                }
+                sw.Write(newContent);
             }
         }
 
@@ -1610,141 +1704,50 @@ namespace CodeCleaner
             e.Result = proccessedFileCount;
         }
 
-        private bool CheckAndNotifyXamlFile(string fileName)
+        private void Worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            if (_Worker.CancellationPending)
+            if (e.ProgressPercentage >= 0)
             {
-                return false;
-            }
-
-            Problem problem = CheckXamlFile(fileName);
-
-            if (_Worker.CancellationPending)
-            {
-                return false;
-            }
-
-            if (problem.IsNotNull())
-            {
-                _FileObserver.RemoveFile(fileName);
-                NotifyProblem(problem);
-            }
-            else
-            {
-                _FileObserver.SetFile(fileName);
-            }
-
-            return true;
-        }
-
-        private void BackUpFile(string filePath)
-        {
-            string onlyFileName = Path.GetFileNameWithoutExtension(filePath);
-            string fileExt = Path.GetExtension(filePath);
-            DateTime now = DateTime.Now;
-            string newFilePath = Path.Combine(Project.BackUpOutputPath, string.Format("{0}_{1}{2}", now.ToString(LOG_FILE_NAME_Format), onlyFileName, fileExt));
-            int index = 1;
-
-            while (File.Exists(newFilePath))
-            {
-                newFilePath = Path.Combine(Project.BackUpOutputPath,
-                    string.Format("{0}_{1}[{3}]{2}", now.ToString(LOG_FILE_NAME_Format), onlyFileName, fileExt, index++));
-            }
-
-            if (!Directory.Exists(Project.BackUpOutputPath))
-            {
-                Directory.CreateDirectory(Project.BackUpOutputPath);
-            }
-
-            File.Copy(filePath, newFilePath, true);
-            File.SetLastWriteTime(newFilePath, DateTime.Now);
-
-            DeleteOldBackUpFiles();
-        }
-
-        private void DeleteOldBackUpFiles()
-        {
-            if (Directory.Exists(Project.BackUpOutputPath))
-            {
-                var files = Directory.GetFiles(Project.BackUpOutputPath).Select(p => new FileInfo(p)).OrderBy(p => p.LastWriteTime).ToList();
-                long allSize = files.Select(p => p.Length).Sum();
-
-                if (allSize > MAX_BackUpSize)
+                if (OnProgressChanged.IsNotNull())
                 {
-                    foreach (var finfo in files)
-                    {
-                        try
-                        {
-                            finfo.Delete();
-                            allSize -= finfo.Length;
-
-                            if (allSize <= MAX_BackUpSize)
-                            {
-                                break;
-                            }
-                        }
-                        catch (System.Exception ex)
-                        {
-                            Debug.WriteLine("EXCEPTION: " + ex.ToString());
-                        }
-                    }
-                }
-            }
-        }
-
-        private void SaveContent(string filename, string newContent)
-        {
-            using (StreamWriter sw = new StreamWriter(filename, false, Encoding.UTF8))
-            {
-                sw.Write(newContent);
-            }
-        }
-
-        private bool CheckAndNotifyFile(string currentFilename)
-        {
-            if (!Parser.Parse(currentFilename))
-            {
-                if (_Worker.CancellationPending)
-                {
-                    return false;
-                }
-
-                if (Parser.HasUnrecognisedBlocks)
-                {
-                    SendToQuarantine(currentFilename, new InvalidOperationException("Unrecognised blocks found."));
-                    return true;
-                }
-
-                Problem problem = CheckFile(currentFilename);
-
-                if (_Worker.CancellationPending)
-                {
-                    return false;
-                }
-
-                if (problem.IsNotNull())
-                {
-                    _FileObserver.RemoveFile(currentFilename);
-                    NotifyProblem(problem);
-                }
-                else
-                {
-                    _FileObserver.SetFile(currentFilename);
+                    OnProgressChanged(this, new NewProgressChangedEventArgs(e.UserState.ToWithNull<string>(), e.ProgressPercentage));
                 }
             }
             else
             {
-                _FileObserver.SetFile(currentFilename);
+                if (OnNewProblem.IsNotNull())
+                {
+                    OnNewProblem(this, new NewProblemEventArgs(e.UserState.To<Problem>()));
+                }
             }
-
-            return true;
         }
+
+        private void Worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Error.IsNull())
+            {
+                if (OnProgressComplete.IsNotNull())
+                {
+                    OnProgressComplete(this, new ProgressCompleteEventArgs(e.Cancelled, (int)e.Result));
+                }
+            }
+            else
+            {
+                if (OnProgressComplete.IsNotNull())
+                {
+                    OnProgressComplete(this, new ProgressCompleteEventArgs(e.Error));
+                }
+            }
+        }
+
         #endregion
 
         #region Events
 
         public event EventHandler<NewProblemEventArgs> OnNewProblem;
+
         public event EventHandler<NewProgressChangedEventArgs> OnProgressChanged;
+
         public event EventHandler<ProgressCompleteEventArgs> OnProgressComplete;
 
         #endregion

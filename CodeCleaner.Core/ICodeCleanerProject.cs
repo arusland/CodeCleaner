@@ -7,10 +7,12 @@ namespace CodeCleaner
 {
     public interface ICodeCleanerProject
     {
-        /// <summary>
-        /// RegEx patterns for name of files need to exclude
-        /// </summary>
-        IList<string> ExcludeFilenamePatterns
+        string BackUpOutputPath
+        {
+            get;
+        }
+
+        string CodeSpecificationPath
         {
             get;
         }
@@ -24,17 +26,9 @@ namespace CodeCleaner
         }
 
         /// <summary>
-        /// RegEx patterns for name of files need to include
+        /// RegEx patterns for name of files need to exclude
         /// </summary>
-        IList<string> IncludeFilenamePatterns
-        {
-            get;
-        }
-
-        /// <summary>
-        /// RegEx patterns for content of files need to include
-        /// </summary>
-        IList<string> IncludeContentPatterns
+        IList<string> ExcludeFilenamePatterns
         {
             get;
         }
@@ -48,19 +42,25 @@ namespace CodeCleaner
         }
 
         /// <summary>
+        /// RegEx patterns for content of files need to include
+        /// </summary>
+        IList<string> IncludeContentPatterns
+        {
+            get;
+        }
+
+        /// <summary>
+        /// RegEx patterns for name of files need to include
+        /// </summary>
+        IList<string> IncludeFilenamePatterns
+        {
+            get;
+        }
+
+        /// <summary>
         /// Folder where files which dint pass CodeParser
         /// </summary>
         string QuarantineOutputPath
-        {
-            get;
-        }
-
-        string CodeSpecificationPath
-        {
-            get;
-        }
-
-        string BackUpOutputPath
         {
             get;
         }

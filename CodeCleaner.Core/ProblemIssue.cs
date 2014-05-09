@@ -33,20 +33,14 @@ namespace CodeCleaner
             IssueType = issueType;
             ParseCause = parseCause;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
-        public Exception ParseCause
-        {
-            get;
-            private set;
-        }
-
-        public String Message
+        public IssueType IssueType
         {
             get;
             private set;
@@ -58,20 +52,26 @@ namespace CodeCleaner
             private set;
         }
 
+        public String Message
+        {
+            get;
+            private set;
+        }
+
+        public Exception ParseCause
+        {
+            get;
+            private set;
+        }
+
         public bool Quarantined
         {
             get;
             private set;
         }
 
-        public IssueType IssueType
-        {
-            get;
-            private set;
-        }
-
         #endregion
-        
+
         #endregion
     }
 }

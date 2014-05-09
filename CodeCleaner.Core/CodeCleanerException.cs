@@ -27,26 +27,17 @@ namespace CodeCleaner
         {
             Code = ExceptionCode.UnknownException;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
         /// <summary>
         /// Exception code
         /// </summary>
         public ExceptionCode Code
-        {
-            get;
-            private set;
-        }
-
-        /// <summary>
-        /// Line number in file.
-        /// </summary>
-        public int Line
         {
             get;
             private set;
@@ -60,11 +51,20 @@ namespace CodeCleaner
             get;
             set;
         }
-        
+
+        /// <summary>
+        /// Line number in file.
+        /// </summary>
+        public int Line
+        {
+            get;
+            private set;
+        }
+
         #endregion
-        
+
         #endregion
-        
+
         #region Methods
 
         public static string GetMessageFromCode(ExceptionCode code)
@@ -99,7 +99,7 @@ namespace CodeCleaner
                     throw new InvalidOperationException("Unsupported ExceptionCode: " + code.ToString());
             }
         }
-        
+
         #endregion
     }
 }

@@ -7,12 +7,12 @@ namespace CodeCleaner
 {
     public interface ICodeSpecification
     {
-        IList<ISpecificationTarget> Targets
+        IList<Order> Orders
         {
             get;
         }
 
-        IList<Order> Orders
+        IList<ISpecificationTarget> Targets
         {
             get;
         }

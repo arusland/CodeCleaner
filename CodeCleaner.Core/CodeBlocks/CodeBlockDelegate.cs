@@ -15,11 +15,11 @@ namespace CodeCleaner
         {
             GenericPart = genericPart;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
         public string GenericPart
@@ -27,14 +27,19 @@ namespace CodeCleaner
             get;
             private set;
         }
-        
+
         #endregion
-        
+
         #endregion
 
         #region Methods
 
         #region Public
+
+        public override bool CompareTo(CodeBlock block)
+        {
+            return base.CompareTo(block) && block.To<CodeBlockDelegate>().GenericPart.IdenticalTo(GenericPart);
+        }
 
         public override string Generate(int count)
         {
@@ -43,11 +48,6 @@ namespace CodeCleaner
             result.AppendFormat("{1}{0};", RawContent, GetTabs(count));
 
             return result.ToString();
-        }
-
-        public override bool CompareTo(CodeBlock block)
-        {
-            return base.CompareTo(block) && block.To<CodeBlockDelegate>().GenericPart.IdenticalTo(GenericPart);
         }
 
         #endregion

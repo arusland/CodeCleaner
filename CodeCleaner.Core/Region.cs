@@ -33,31 +33,21 @@ namespace CodeCleaner
 
         #region Public
 
-        public string Name
-        {
-            get;
-            private set;
-        }
-
-        public IList<RegionType> Types
-        {
-            get;
-            private set;
-        }
-
-        public IList<ModificatorType> Modificators
-        {
-            get;
-            private set;
-        }
-
-        public string NameConvention
-        {
-            get;
-            private set;
-        }
-
         public bool AllowFieldAssign
+        {
+            get;
+            private set;
+        }
+
+        public bool HasInnerRegionsOrder
+        {
+            get
+            {
+                return InnerRegionsOrder.IsNotNull();
+            }
+        }
+
+        public Order InnerRegionsOrder
         {
             get;
             private set;
@@ -69,13 +59,19 @@ namespace CodeCleaner
             private set;
         }
 
-        public Order InnerRegionsOrder
+        public IList<ModificatorType> Modificators
         {
             get;
             private set;
         }
 
-        public Order TypesOrder
+        public string Name
+        {
+            get;
+            private set;
+        }
+
+        public string NameConvention
         {
             get;
             private set;
@@ -93,12 +89,16 @@ namespace CodeCleaner
             private set;
         }
 
-        public bool HasInnerRegionsOrder
+        public IList<RegionType> Types
         {
-            get
-            {
-                return InnerRegionsOrder.IsNotNull();
-            }
+            get;
+            private set;
+        }
+
+        public Order TypesOrder
+        {
+            get;
+            private set;
         }
 
         #endregion

@@ -15,20 +15,20 @@ namespace CodeCleaner
 
         private const string DB_FileName = "files.hash";
         private const int MAX_RecordCount = 10000;
-        
-        #endregion        
+
+        #endregion
 
         #region Fields
 
+        private readonly IList<string> _ActiveFiles;
         private readonly string _DbFileName;
         private readonly IDictionary<string, string> _FileHashes;
-        private readonly IList<string> _ActiveFiles;
         private readonly string _Version;
-        
+
         #endregion
 
         #region Ctors
-        
+
         public FileObserverManager()
         {
             _Version = this.GetType().Assembly.GetName().Version.ToString();
@@ -37,21 +37,18 @@ namespace CodeCleaner
             _DbFileName = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), CodeCleaner.Helpers.PathHelper.AppDataName), DB_FileName);
             Load();
         }
-        
+
         #endregion
 
         #region Methods
-        
+
         #region Private
 
-        private void MakeActive(string filePath)
+        private string ComposeTime(string file, string hash)
         {
-            if (!_ActiveFiles.Contains(filePath))
-            {
-                _ActiveFiles.Add(filePath);
-            }
+            return Strings.Format("{0}|{1}", file, hash);
         }
-        
+
         private void Load()
         {
             if (File.Exists(_DbFileName))
@@ -80,6 +77,26 @@ namespace CodeCleaner
             }
         }
 
+        private void MakeActive(string filePath)
+        {
+            if (!_ActiveFiles.Contains(filePath))
+            {
+                _ActiveFiles.Add(filePath);
+            }
+        }
+
+        private string MakeHash(string file)
+        {
+            var fi = new FileInfo(file);
+
+            if (fi.Exists)
+            {
+                return Strings.Format("{0}-{1}", fi.LastWriteTime.Ticks, fi.Length);
+            }
+
+            return "file_not_found." + Guid.NewGuid().ToString();
+        }
+
         private string ParseItem(string line, out string hash)
         {
             var splitted = line.Split('|').Select(p => p.Trim()).ToArray();
@@ -94,29 +111,12 @@ namespace CodeCleaner
             return string.Empty;
         }
 
-        private string ComposeTime(string file, string hash)
-        {
-            return Strings.Format("{0}|{1}", file, hash);
-        }
-
-        private string MakeHash(string file)
-        {
-            var fi = new FileInfo(file);
-
-            if (fi.Exists)
-            {
-                return Strings.Format("{0}-{1}", fi.LastWriteTime.Ticks, fi.Length);
-            }
-
-            return "file_not_found." + Guid.NewGuid().ToString();
-        }
-        
         #endregion
-        
+
         #endregion
 
         #region IFileObserverManager
-        
+
         public bool IsChanged(string filePath)
         {
             bool result;
@@ -137,15 +137,6 @@ namespace CodeCleaner
             MakeActive(filePath);
 
             return result;
-        }        
-
-        public void SetFile(string filePath)
-        {
-            filePath = filePath.ToLower();
-
-            _FileHashes[filePath] = MakeHash(filePath);
-
-            MakeActive(filePath);
         }
 
         public void RemoveFile(string filePath)
@@ -187,6 +178,15 @@ namespace CodeCleaner
                         break;
                 }
             }
+        }
+
+        public void SetFile(string filePath)
+        {
+            filePath = filePath.ToLower();
+
+            _FileHashes[filePath] = MakeHash(filePath);
+
+            MakeActive(filePath);
         }
 
         #endregion

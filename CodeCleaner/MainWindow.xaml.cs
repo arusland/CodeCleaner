@@ -16,11 +16,11 @@ namespace CodeCleaner
     {
         #region Constants
 
+        private const string ERROR_MESSAGE_ProjectNotLoaded = "Project isn't loaded.";
+        private const string OPERATION_Stop = "Stop";
+        private const string OPERATION_Stopping = "Stopping...";
         private const string TEMPLATE_Title = "Code Cleaner v{0}.{1}";
         private const string TITLE_Problems = "Problems";
-        private const string OPERATION_Stopping = "Stopping...";
-        private const string OPERATION_Stop = "Stop";
-        private const string ERROR_MESSAGE_ProjectNotLoaded = "Project isn't loaded.";
 
         #endregion
 
@@ -41,66 +41,22 @@ namespace CodeCleaner
 
         #region Fields
 
-        private CodeCleanerManager _CodeCleaner;
-        private ICodeParser _Parser;
-        private CodeSpecification _CodeSpecification;
-        private IFileObserverManager _FileObserver;
-        private CodeCleanerProject _Project;
-        private readonly string _CurrentAppTitle;
-        private DateTime _ProgressStartTime;
-        private bool _RunOnChecked;
-        private bool _FixChecked;
         private List<Problem> _CheckedProblems;
+        private CodeCleanerManager _CodeCleaner;
+        private CodeSpecification _CodeSpecification;
+        private readonly string _CurrentAppTitle;
+        private IFileObserverManager _FileObserver;
+        private bool _FixChecked;
+        private ICodeParser _Parser;
+        private DateTime _ProgressStartTime;
+        private CodeCleanerProject _Project;
+        private bool _RunOnChecked;
 
         #endregion
 
         #region Methods
 
         #region Private
-
-        private void InitProgress()
-        {
-            if (TaskbarManager.IsPlatformSupported)
-            {
-                TaskbarManager.Instance.SetProgressValue(0, 100);
-                TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
-            }
-        }
-
-        private void UpdateAllIssuesCount()
-        {
-            int problemsCount = gridProblems.Children.OfType<ProblemViewControl>().Count();
-            int allIssuesCount = gridProblems.Children.OfType<ProblemViewControl>().Select(p => p.Problem).Sum(p => p.Issues.Count);
-
-            if (allIssuesCount > 0)
-            {
-                tabItemProblems.Header = string.Format("{0} ({1}/{2} issues)", TITLE_Problems, problemsCount, allIssuesCount);
-            }
-            else
-            {
-                tabItemProblems.Header = TITLE_Problems;
-            }
-        }
-
-        private string Timespan2Str(TimeSpan ts)
-        {
-            StringBuilder timeMsg = new StringBuilder();
-
-            if ((int)ts.TotalMinutes > 0)
-            {
-                timeMsg.AppendFormat("{0} min {1} sec", (int)ts.TotalMinutes, (int)ts.TotalSeconds % 60);
-            }
-            else if ((int)ts.Seconds > 0)
-            {
-                timeMsg.AppendFormat("{0} sec", (int)ts.TotalSeconds);
-            }
-            else
-            {
-                timeMsg.AppendFormat("{0} ms", (int)ts.TotalMilliseconds);
-            }
-
-            return timeMsg.ToString();
-        }
 
         private void ClearProject()
         {
@@ -121,6 +77,32 @@ namespace CodeCleaner
             }
 
             _FileObserver.IfPresent(p => p.Save());
+        }
+
+        private void EnableControls(bool enable, bool startOperation, bool fixOperation)
+        {
+            buttonBrowse.IsEnabled = enable;
+            buttonRun.IsEnabled = enable || startOperation;
+            checkBoxCheckAll.IsEnabled = checkBoxRunChecked.IsEnabled = gridProblems.Children.Count > 0;
+            checkBoxCheckAll.IsChecked = checkBoxRunChecked.IsChecked = gridProblems.Children.OfType<ProblemViewControl>().Any(p => p.IsCheked);
+            buttonFix.IsEnabled = (enable || fixOperation) && gridProblems.Children.OfType<ProblemViewControl>().Any(p => p.Problem.CanFixProblem);
+            buttonTestGenerating.IsEnabled = enable;
+
+            if (!startOperation)
+            {
+                statusProgressBar.Value = 0;
+                //statusLabel.Content = string.Empty;
+                statusProgressBar.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void InitProgress()
+        {
+            if (TaskbarManager.IsPlatformSupported)
+            {
+                TaskbarManager.Instance.SetProgressValue(0, 100);
+                TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
+            }
         }
 
         private void OpenProject(string fileName)
@@ -167,20 +149,38 @@ namespace CodeCleaner
             statusLabel.Content = message;
         }
 
-        private void EnableControls(bool enable, bool startOperation, bool fixOperation)
+        private string Timespan2Str(TimeSpan ts)
         {
-            buttonBrowse.IsEnabled = enable;
-            buttonRun.IsEnabled = enable || startOperation;
-            checkBoxCheckAll.IsEnabled = checkBoxRunChecked.IsEnabled = gridProblems.Children.Count > 0;
-            checkBoxCheckAll.IsChecked = checkBoxRunChecked.IsChecked = gridProblems.Children.OfType<ProblemViewControl>().Any(p => p.IsCheked);
-            buttonFix.IsEnabled = (enable || fixOperation) && gridProblems.Children.OfType<ProblemViewControl>().Any(p => p.Problem.CanFixProblem);
-            buttonTestGenerating.IsEnabled = enable;
+            StringBuilder timeMsg = new StringBuilder();
 
-            if (!startOperation)
+            if ((int)ts.TotalMinutes > 0)
             {
-                statusProgressBar.Value = 0;
-                //statusLabel.Content = string.Empty;
-                statusProgressBar.Visibility = Visibility.Collapsed;
+                timeMsg.AppendFormat("{0} min {1} sec", (int)ts.TotalMinutes, (int)ts.TotalSeconds % 60);
+            }
+            else if ((int)ts.Seconds > 0)
+            {
+                timeMsg.AppendFormat("{0} sec", (int)ts.TotalSeconds);
+            }
+            else
+            {
+                timeMsg.AppendFormat("{0} ms", (int)ts.TotalMilliseconds);
+            }
+
+            return timeMsg.ToString();
+        }
+
+        private void UpdateAllIssuesCount()
+        {
+            int problemsCount = gridProblems.Children.OfType<ProblemViewControl>().Count();
+            int allIssuesCount = gridProblems.Children.OfType<ProblemViewControl>().Select(p => p.Problem).Sum(p => p.Issues.Count);
+
+            if (allIssuesCount > 0)
+            {
+                tabItemProblems.Header = string.Format("{0} ({1}/{2} issues)", TITLE_Problems, problemsCount, allIssuesCount);
+            }
+            else
+            {
+                tabItemProblems.Header = TITLE_Problems;
             }
         }
 
@@ -201,23 +201,6 @@ namespace CodeCleaner
             {
                 OpenProject(dialog.FileName);
             }
-        }
-
-        private void Window_Closing(object sender, CancelEventArgs e)
-        {
-            Settings.Default.LastUsedProjectPath = textBoxProjectPath.Text;
-            Settings.Default.Save();
-
-            _FileObserver.IfPresent(p => p.Save());
-        }
-
-        private void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-            if (Settings.Default.LastUsedProjectPath.IsNotNullOrEmpty())
-            {
-                OpenProject(Settings.Default.LastUsedProjectPath);
-            }
-            EnableControls(true, false, false);
         }
 
         private void buttonFix_Click(object sender, RoutedEventArgs e)
@@ -258,7 +241,7 @@ namespace CodeCleaner
             {
                 ShowError(ERROR_MESSAGE_ProjectNotLoaded);
             }
-        }        
+        }
 
         private void buttonRun_Click(object sender, RoutedEventArgs e)
         {
@@ -310,20 +293,32 @@ namespace CodeCleaner
             }
         }
 
-        private List<Problem> GetCheckedProblems()
+        private void buttonTestGenerating_Click(object sender, RoutedEventArgs e)
         {
-            return gridProblems.Children.OfType<ProblemViewControl>().Where(p => p.IsCheked).Select(p => p.Problem).ToList();
+            if (_CodeCleaner.IsNotNull())
+            {
+                var problemFiles = _CodeCleaner.CheckGeneratingFiles(null);
+
+                if (problemFiles.Length > 0)
+                {
+                    ShowError(string.Format("Found {0} files that cannot be saved.", problemFiles.Length));
+                }
+                else
+                {
+                    ShowInfo("Generating successfully tested.");
+                }
+            }
+            else
+            {
+                ShowError(ERROR_MESSAGE_ProjectNotLoaded);
+            }
         }
 
-        private void CodeCleaner_OnProgressChanged(object sender, NewProgressChangedEventArgs e)
+        private void checkBoxCheckAll_Checked(object sender, RoutedEventArgs e)
         {
-            statusProgressBar.Visibility = e.Percentage > 0 ? Visibility.Visible : Visibility.Collapsed;
-            statusProgressBar.Value = e.Percentage;
-            statusLabel.Content = e.NextFilename;
-
-            if (TaskbarManager.IsPlatformSupported)
+            foreach (var checkBox in gridProblems.Children.OfType<ProblemViewControl>())
             {
-                TaskbarManager.Instance.SetProgressValue(e.Percentage, 100);
+                checkBox.IsCheked = checkBoxCheckAll.IsChecked == true;
             }
         }
 
@@ -363,17 +358,15 @@ namespace CodeCleaner
             }
         }
 
-        private void item_OnViewSource(object sender, EventArgs e)
+        private void CodeCleaner_OnProgressChanged(object sender, NewProgressChangedEventArgs e)
         {
-            try
-            {
-                ProblemViewControl view = sender.To<ProblemViewControl>();
+            statusProgressBar.Visibility = e.Percentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+            statusProgressBar.Value = e.Percentage;
+            statusLabel.Content = e.NextFilename;
 
-                System.Diagnostics.Process.Start(view.Problem.Filename);
-            }
-            catch (System.Exception ex)
+            if (TaskbarManager.IsPlatformSupported)
             {
-                ShowError(ex.Message);
+                TaskbarManager.Instance.SetProgressValue(e.Percentage, 100);
             }
         }
 
@@ -426,12 +419,28 @@ namespace CodeCleaner
             }
         }
 
-        private void checkBoxCheckAll_Checked(object sender, RoutedEventArgs e)
+        private List<Problem> GetCheckedProblems()
         {
-            foreach (var checkBox in gridProblems.Children.OfType<ProblemViewControl>())
+            return gridProblems.Children.OfType<ProblemViewControl>().Where(p => p.IsCheked).Select(p => p.Problem).ToList();
+        }
+
+        private void item_OnViewSource(object sender, EventArgs e)
+        {
+            try
             {
-                checkBox.IsCheked = checkBoxCheckAll.IsChecked == true;
+                ProblemViewControl view = sender.To<ProblemViewControl>();
+
+                System.Diagnostics.Process.Start(view.Problem.Filename);
             }
+            catch (System.Exception ex)
+            {
+                ShowError(ex.Message);
+            }
+        }
+
+        private void textBoxProjectPath_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            buttonTestGenerating.Visibility = Visibility.Visible;
         }
 
         private void Window_Activated(object sender, EventArgs e)
@@ -439,30 +448,21 @@ namespace CodeCleaner
             buttonRun.Focus();
         }
 
-        private void buttonTestGenerating_Click(object sender, RoutedEventArgs e)
+        private void Window_Closing(object sender, CancelEventArgs e)
         {
-            if (_CodeCleaner.IsNotNull())
-            {
-                var problemFiles = _CodeCleaner.CheckGeneratingFiles(null);
+            Settings.Default.LastUsedProjectPath = textBoxProjectPath.Text;
+            Settings.Default.Save();
 
-                if (problemFiles.Length > 0)
-                {
-                    ShowError(string.Format("Found {0} files that cannot be saved.", problemFiles.Length));
-                }
-                else
-                {
-                    ShowInfo("Generating successfully tested.");
-                }
-            }
-            else
-            {
-                ShowError(ERROR_MESSAGE_ProjectNotLoaded);
-            }
+            _FileObserver.IfPresent(p => p.Save());
         }
 
-        private void textBoxProjectPath_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            buttonTestGenerating.Visibility = Visibility.Visible;
+            if (Settings.Default.LastUsedProjectPath.IsNotNullOrEmpty())
+            {
+                OpenProject(Settings.Default.LastUsedProjectPath);
+            }
+            EnableControls(true, false, false);
         }
 
         #endregion

@@ -28,18 +28,18 @@ namespace CodeCleaner
             RootBlock = rootBlock;
             Regenerateable = regenerateable;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
-        public Exception ParseCause
+        public bool CanFixProblem
         {
             get
             {
-                return Issues.Select(p => p.ParseCause).FirstOrDefault();
+                return (HasOrderIssue || HasXamlStrings) && Regenerateable;
             }
         }
 
@@ -47,14 +47,6 @@ namespace CodeCleaner
         {
             get;
             private set;
-        }
-
-        public bool Quarantined
-        {
-            get
-            {
-                return Issues.Any(p => p.Quarantined);
-            }
         }
 
         public bool HasOrderIssue
@@ -79,10 +71,20 @@ namespace CodeCleaner
             private set;
         }
 
-        public CodeBlock RootBlock
+        public Exception ParseCause
         {
-            get;
-            private set;
+            get
+            {
+                return Issues.Select(p => p.ParseCause).FirstOrDefault();
+            }
+        }
+
+        public bool Quarantined
+        {
+            get
+            {
+                return Issues.Any(p => p.Quarantined);
+            }
         }
 
         public bool Regenerateable
@@ -91,16 +93,14 @@ namespace CodeCleaner
             private set;
         }
 
-        public bool CanFixProblem
+        public CodeBlock RootBlock
         {
-            get
-            {
-                return (HasOrderIssue || HasXamlStrings) && Regenerateable;
-            }
+            get;
+            private set;
         }
 
         #endregion
-        
+
         #endregion
     }
 }

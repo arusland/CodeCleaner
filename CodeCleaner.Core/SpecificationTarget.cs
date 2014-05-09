@@ -26,24 +26,12 @@ namespace CodeCleaner
             NameConvention = nameConvention;
             TypesOrder = typesOrder;
         }
-        
+
         #endregion
 
         #region ISpecificationTarget
 
-        public SortType SortType
-        {
-            get;
-            private set;
-        }
-
         public BindingType BindingType
-        {
-            get;
-            private set;
-        }
-
-        public IList<Region> Regions
         {
             get;
             private set;
@@ -55,13 +43,25 @@ namespace CodeCleaner
             private set;
         }
 
+        public string NameConvention
+        {
+            get;
+            private set;
+        }
+
+        public IList<Region> Regions
+        {
+            get;
+            private set;
+        }
+
         public bool RegionsOnly
         {
             get;
             private set;
         }
 
-        public string NameConvention
+        public SortType SortType
         {
             get;
             private set;

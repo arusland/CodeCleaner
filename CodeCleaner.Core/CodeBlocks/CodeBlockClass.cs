@@ -23,11 +23,11 @@ namespace CodeCleaner
             InheritList = inheritList;
             GenericPart = genericPart;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
         public string GenericPart
@@ -42,7 +42,19 @@ namespace CodeCleaner
             private set;
         }
 
+        public bool IsAbstract
+        {
+            get;
+            private set;
+        }
+
         public bool IsPartial
+        {
+            get;
+            private set;
+        }
+
+        public bool IsSealed
         {
             get;
             private set;
@@ -54,24 +66,12 @@ namespace CodeCleaner
             private set;
         }
 
-        public bool IsAbstract
-        {
-            get;
-            private set;
-        }
-
-        public bool IsSealed
-        {
-            get;
-            private set;
-        }
-        
         #endregion
-        
+
         #endregion
 
         #region Methods
-        
+
         #region Public
 
         public override bool CompareTo(CodeBlock block)
@@ -98,9 +98,9 @@ namespace CodeCleaner
 
             return result.ToString();
         }
-        
+
         #endregion
-        
+
         #endregion
     }
 }

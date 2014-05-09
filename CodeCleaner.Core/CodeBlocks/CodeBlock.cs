@@ -13,11 +13,11 @@ namespace CodeCleaner
     {
         #region Fields
 
+        private IList<CodeBlock> _InnerBlocks;
         private static string _Tab;
         private static Dictionary<int, string> _Tabs;
-        private IList<CodeBlock> _InnerBlocks;
         private IList<CodeBlock> _ValuableInnerBlocks;
-        
+
         #endregion
 
         #region Ctors
@@ -54,6 +54,35 @@ namespace CodeCleaner
 
         #region Public
 
+        public string Content
+        {
+            get;
+            private set;
+        }
+
+        public bool HasInnerBlocks
+        {
+            get
+            {
+                return InnerBlocks.Count > 0;
+            }
+        }
+
+        public IList<CodeBlock> InnerBlocks
+        {
+            get
+            {
+                return _InnerBlocks;
+            }
+            set
+            {
+                Checker.NotNull(value, "value");
+
+                _ValuableInnerBlocks = null;
+                _InnerBlocks = value;
+            }
+        }
+
         public bool IsContainerType
         {
             get
@@ -72,7 +101,7 @@ namespace CodeCleaner
             }
         }
 
-        public CodeBlock[] PreBlocks
+        public int LineNumber
         {
             get;
             private set;
@@ -84,73 +113,25 @@ namespace CodeCleaner
             private set;
         }
 
-        public CodeBlockType Type
-        {
-            get;
-            private set;
-        }
-
-        public IList<CodeBlock> InnerBlocks
-        {
-            get
-            {
-                return _InnerBlocks;
-            }
-            set
-            {
-                Checker.NotNull(value, "value");
-
-                _ValuableInnerBlocks = null;
-                _InnerBlocks = value;
-            }
-        }
-
-        public IList<CodeBlock> ValuableInnerBlocks
-        {
-            get
-            {
-                if (_ValuableInnerBlocks.IsNull())
-                {
-                    _ValuableInnerBlocks = InnerBlocks.Where(p => p.Type != CodeBlockType.Comment && p.Type != CodeBlockType.SingleLineDirective).ToList();
-                }
-
-                return _ValuableInnerBlocks;
-            }
-        }
-
-        public string Content
-        {
-            get;
-            private set;
-        }
-
-        public string RawContent
-        {
-            get;
-            private set;
-        }
-
-        public int LineNumber
-        {
-            get;
-            private set;
-        }
-
         public string Name
         {
             get;
             private set;
         }
 
-        public bool HasInnerBlocks
+        public CodeBlock Parent
         {
-            get
-            {
-                return InnerBlocks.Count > 0;
-            }
+            get;
+            private set;
         }
 
-        public CodeBlock Parent
+        public CodeBlock[] PreBlocks
+        {
+            get;
+            private set;
+        }
+
+        public string RawContent
         {
             get;
             private set;
@@ -172,7 +153,26 @@ namespace CodeCleaner
                 }
             }
         }
-        
+
+        public CodeBlockType Type
+        {
+            get;
+            private set;
+        }
+
+        public IList<CodeBlock> ValuableInnerBlocks
+        {
+            get
+            {
+                if (_ValuableInnerBlocks.IsNull())
+                {
+                    _ValuableInnerBlocks = InnerBlocks.Where(p => p.Type != CodeBlockType.Comment && p.Type != CodeBlockType.SingleLineDirective).ToList();
+                }
+
+                return _ValuableInnerBlocks;
+            }
+        }
+
         #endregion
 
         #region Protected
@@ -184,7 +184,7 @@ namespace CodeCleaner
                 return _Tab;
             }
         }
-        
+
         #endregion
 
         #endregion
@@ -193,12 +193,70 @@ namespace CodeCleaner
 
         #region Public
 
+        public virtual bool CompareTo(CodeBlock block)
+        {
+            if (this == block)
+            {
+                return true;
+            }
+
+            if (Name.IdenticalTo(block.Name) && block.Content.IdenticalTo(Content) && block.Modificator == Modificator && block.RawContent.IdenticalTo(RawContent)
+                && block.Type == Type && block.PreBlocks.Length == PreBlocks.Length && block.InnerBlocks.Count == InnerBlocks.Count)
+            {
+                for (int i = 0; i < PreBlocks.Length;i++ )
+                {
+                    if (!PreBlocks[i].CompareTo(block.PreBlocks[i]))
+                    {
+                        return false;
+                    }
+                }
+
+                for (int i = 0; i < InnerBlocks.Count; i++)
+                {
+                    if (!InnerBlocks[i].CompareTo(block.InnerBlocks[i]))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
         public string Generate()
         {
             return Generate(0);
         }
 
         public abstract string Generate(int count);
+
+        public static string GetTabs(int count)
+        {
+            if (count == 1)
+            {
+                return _Tab;
+            }
+            else if (!_Tabs.ContainsKey(count))
+            {
+                StringBuilder result = new StringBuilder();
+
+                for (int i = 0; i < count;i++)
+                {
+                    result.Append(Tab);
+                }
+
+                _Tabs.Add(count, result.ToString());
+            }
+
+            return _Tabs[count];
+        }
+
+        public override string ToString()
+        {
+            return string.Format("CodeBlock: {0}:{1}", Type.ToString(), Name);
+        }
 
         public void ValidateName(string name)
         {
@@ -236,64 +294,6 @@ namespace CodeCleaner
             }
         }
 
-        public override string ToString()
-        {
-            return string.Format("CodeBlock: {0}:{1}", Type.ToString(), Name);
-        }
-
-        public static string GetTabs(int count)
-        {
-            if (count == 1)
-            {
-                return _Tab;
-            }
-            else if (!_Tabs.ContainsKey(count))
-            {
-                StringBuilder result = new StringBuilder();
-
-                for (int i = 0; i < count;i++)
-                {
-                    result.Append(Tab);
-                }
-
-                _Tabs.Add(count, result.ToString());
-            }
-
-            return _Tabs[count];
-        }
-
-        public virtual bool CompareTo(CodeBlock block)
-        {
-            if (this == block)
-            {
-                return true;
-            }
-
-            if (Name.IdenticalTo(block.Name) && block.Content.IdenticalTo(Content) && block.Modificator == Modificator && block.RawContent.IdenticalTo(RawContent)
-                && block.Type == Type && block.PreBlocks.Length == PreBlocks.Length && block.InnerBlocks.Count == InnerBlocks.Count)
-            {
-                for (int i = 0; i < PreBlocks.Length;i++ )
-                {
-                    if (!PreBlocks[i].CompareTo(block.PreBlocks[i]))
-                    {
-                        return false;
-                    }
-                }
-
-                for (int i = 0; i < InnerBlocks.Count; i++)
-                {
-                    if (!InnerBlocks[i].CompareTo(block.InnerBlocks[i]))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            return false;
-        }
-        
         #endregion
 
         #region Protected
@@ -332,7 +332,7 @@ namespace CodeCleaner
 
             return result.ToString().TrimEnd();
         }
-        
+
         #endregion
 
         #endregion

@@ -21,7 +21,13 @@ namespace CodeCleaner
 
         #region Properties
 
-        #region Public        
+        #region Public
+
+        public string[] Arguments
+        {
+            get;
+            private set;
+        }
 
         public string ReturnType
         {
@@ -29,13 +35,7 @@ namespace CodeCleaner
             private set;
         }
 
-        public string[] Arguments
-        {
-            get;
-            private set;
-        }
-        
-        #endregion        
+        #endregion
 
         #endregion
 

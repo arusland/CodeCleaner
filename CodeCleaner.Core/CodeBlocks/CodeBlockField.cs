@@ -24,14 +24,14 @@ namespace CodeCleaner
             FieldType = fieldType;
             IsStatic = isStatic;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
-        public bool IsStatic
+        public string FieldType
         {
             get;
             private set;
@@ -43,7 +43,7 @@ namespace CodeCleaner
             private set;
         }
 
-        public string FieldType
+        public bool IsStatic
         {
             get;
             private set;
@@ -54,13 +54,13 @@ namespace CodeCleaner
             get;
             private set;
         }
-        
+
         #endregion
-        
+
         #endregion
 
         #region Methods
-        
+
         #region Public
 
         public override bool CompareTo(CodeBlock block)
@@ -79,9 +79,9 @@ namespace CodeCleaner
         {
             return string.Format("{0}{1};", GetTabs(count), RawContent);
         }
-        
+
         #endregion
-        
+
         #endregion
     }
 }

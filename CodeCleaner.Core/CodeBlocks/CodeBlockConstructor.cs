@@ -15,12 +15,18 @@ namespace CodeCleaner
             AdditionalCallName = additionalCallName;
             GenericPart = genericPart;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
+
+        public string AdditionalCallName
+        {
+            get;
+            private set;
+        }
 
         public string GenericPart
         {
@@ -29,12 +35,6 @@ namespace CodeCleaner
         }
 
         public bool IsStatic
-        {
-            get;
-            private set;
-        }
-
-        public string AdditionalCallName
         {
             get;
             private set;
@@ -53,7 +53,7 @@ namespace CodeCleaner
         }
 
         #endregion
-        
+
         #endregion
     }
 }

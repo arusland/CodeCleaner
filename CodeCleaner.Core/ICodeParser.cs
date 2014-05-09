@@ -7,9 +7,7 @@ namespace CodeCleaner
 {
     public interface ICodeParser
     {
-        bool Parse(string fileName);
-
-        bool Regenerateable
+        IList<CodeBlock> CodeBlocks
         {
             get;
         }
@@ -19,9 +17,11 @@ namespace CodeCleaner
             get;
         }
 
-        IList<CodeBlock> CodeBlocks
+        bool Regenerateable
         {
             get;
         }
+
+        bool Parse(string fileName);
     }
 }

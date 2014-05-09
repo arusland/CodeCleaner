@@ -17,20 +17,20 @@ namespace CodeCleaner
         {
             Error = error;
         }
-        
+
         #endregion
 
         #region Properties
-        
+
         #region Public
 
-        public Exception Error
+        public bool Canceled
         {
             get;
             private set;
         }
 
-        public bool Canceled
+        public Exception Error
         {
             get;
             private set;
@@ -41,9 +41,9 @@ namespace CodeCleaner
             get;
             private set;
         }
-        
+
         #endregion
-        
+
         #endregion
     }
 }

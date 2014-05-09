@@ -1,26 +1,17 @@
-﻿<UserControl x:Class="CodeCleaner.ProblemViewControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             HorizontalContentAlignment="Stretch"
-             Loaded="UserControl_Loaded"
-             MouseLeftButtonDown="UserControl_MouseDown"
-             MouseRightButtonDown="UserControl_MouseRightButtonDown"
-             VerticalAlignment="Stretch">
-    <Grid x:Name="RootLayout">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal">
-            <CheckBox x:Name="checkBoxUse" Margin="5"/>
-            <TextBlock x:Name="textBlockMessage" Text="Test message from " VerticalAlignment="Center" Margin="5" FontSize="12" FontWeight="Bold"/>
-        </StackPanel>
-        <!--<ListBox x:Name="listIssues" Grid.Row="1" Margin="15,3,3,3" Visibility="Collapsed"/>-->
-        <Grid x:Name="gridList" Visibility="Collapsed" Grid.Row="1" Margin="20,5,5,5">
-            <Grid.RowDefinitions>
-            </Grid.RowDefinitions>
-        </Grid>
+<UserControl x:Class="CodeCleaner.ProblemViewControl" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" HorizontalContentAlignment="Stretch" Loaded="UserControl_Loaded" MouseLeftButtonDown="UserControl_MouseDown" MouseRightButtonDown="UserControl_MouseRightButtonDown" VerticalAlignment="Stretch" xmlns:res="clr-namespace:CodeCleaner.Properties">
+  <Grid x:Name="RootLayout">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <StackPanel Orientation="Horizontal">
+      <CheckBox x:Name="checkBoxUse" Margin="5" />
+      <TextBlock x:Name="textBlockMessage" Text="{x:Static Member=res:Resources.XAML_ProblemViewControlTextBlockMessageText}" VerticalAlignment="Center" Margin="5" FontSize="12" FontWeight="Bold" />
+    </StackPanel>
+    <!--<ListBox x:Name="listIssues" Grid.Row="1" Margin="15,3,3,3" Visibility="Collapsed"/>-->
+    <Grid x:Name="gridList" Visibility="Collapsed" Grid.Row="1" Margin="20,5,5,5">
+      <Grid.RowDefinitions>
+      </Grid.RowDefinitions>
     </Grid>
+  </Grid>
 </UserControl>

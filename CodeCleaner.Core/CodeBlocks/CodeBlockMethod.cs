@@ -47,13 +47,7 @@ namespace CodeCleaner
             private set;
         }
 
-        public bool IsStatic
-        {
-            get;
-            private set;
-        }
-
-        public bool IsVirtual
+        public bool IsNew
         {
             get;
             private set;
@@ -71,13 +65,19 @@ namespace CodeCleaner
             private set;
         }
 
-        public bool IsNew
+        public bool IsStatic
         {
             get;
             private set;
-        }       
-        
-        #endregion        
+        }
+
+        public bool IsVirtual
+        {
+            get;
+            private set;
+        }
+
+        #endregion
 
         #endregion
 
