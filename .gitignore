@@ -1,0 +1,10 @@
+/CodeCleaner/bin
+/CodeCleaner/obj
+/CodeCleaner.Core/bin
+/CodeCleaner.Core/obj
+/CodeCleaner.Core/bin
+/CodeCleaner.Core/obj
+/CodeCleaner.Test/bin
+/CodeCleaner.Test/obj
+/*.suo
+/CodeCleaner/*.user

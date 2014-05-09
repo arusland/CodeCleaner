@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CCProject version="1.0">
+  <ExcludeList>
+    <FilenamePatterns>
+      <Pattern Value="*AssemblyInfo.cs"/>
+      <Pattern Value="*.Designer.cs"/>
+      <Pattern Value="Reference.cs"/>
+      <Pattern Value="*.g.cs"/>
+      <Pattern Value="*.g.i.cs"/>
+      <Pattern Value="*Mock.cs"/>
+      <Pattern Value="*Test.cs"/>
+      <Pattern Value="Xml.cs"/>
+      <Pattern Value="AssemblyGeneralInfo.cs"/>
+      <Pattern Value="*.designer.cs"/>
+      <Pattern Value="GlobalSuppressions.cs"/>
+      <Pattern Value="Settings.cs"/>
+      <Pattern Value="ISettings.cs"/>
+      <Pattern Value="StylesDictionary.xaml"/>      
+      <Pattern Value="TemporaryGeneratedFile_*.*"/>      
+    </FilenamePatterns>    
+  </ExcludeList>
+  <IncludeList>    
+  </IncludeList>
+  <FilesSearchPaths>
+    <Path Value="..\"/>	
+  </FilesSearchPaths>
+  <QuarantineOutputPath Value=".\Quarantine\"/>
+  <CodeSpecificationPath Value=".\SSCodeSpecification.xml"/>
+</CCProject>

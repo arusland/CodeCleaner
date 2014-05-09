@@ -1,0 +1,86 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeCleaner", "CodeCleaner\CodeCleaner.csproj", "{44B4BD44-96A4-42A1-A149-5858F6DCB87C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{99D992A1-E217-419F-999C-1EE3666F6781}"
+	ProjectSection(SolutionItems) = preProject
+		Templates\CodeCleanerProject.xml = Templates\CodeCleanerProject.xml
+		Templates\SSCodeSpecification.xml = Templates\SSCodeSpecification.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{A92E7743-2520-420D-8930-A246A5DDE941}"
+	ProjectSection(SolutionItems) = preProject
+		External\Orygin.Shared.Minimal.dll = External\Orygin.Shared.Minimal.dll
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NUnit", "NUnit", "{C2ABC70B-9EFB-47AC-8CE7-03B6F5715DDD}"
+	ProjectSection(SolutionItems) = preProject
+		External\NUnit\nunit.framework.dll = External\NUnit\nunit.framework.dll
+		External\NUnit\nunit.framework.xml = External\NUnit\nunit.framework.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Windows7", "Windows7", "{253FD038-977E-4821-8265-6EC43F55C28D}"
+	ProjectSection(SolutionItems) = preProject
+		External\Windows7\Microsoft.WindowsAPICodePack.dll = External\Windows7\Microsoft.WindowsAPICodePack.dll
+		External\Windows7\Microsoft.WindowsAPICodePack.Shell.dll = External\Windows7\Microsoft.WindowsAPICodePack.Shell.dll
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeCleaner.Test", "CodeCleaner.Test\CodeCleaner.Test.csproj", "{0EB5EBEE-12C3-49B1-90AB-C62711525E08}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeCleaner.Core", "CodeCleaner.Core\CodeCleaner.Core.csproj", "{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Debug|x86.ActiveCfg = Debug|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Debug|x86.Build.0 = Debug|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Release|Any CPU.ActiveCfg = Release|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Release|Mixed Platforms.Build.0 = Release|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Release|x86.ActiveCfg = Release|x86
+		{44B4BD44-96A4-42A1-A149-5858F6DCB87C}.Release|x86.Build.0 = Release|x86
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0EB5EBEE-12C3-49B1-90AB-C62711525E08}.Release|x86.ActiveCfg = Release|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}.Release|x86.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C2ABC70B-9EFB-47AC-8CE7-03B6F5715DDD} = {A92E7743-2520-420D-8930-A246A5DDE941}
+		{253FD038-977E-4821-8265-6EC43F55C28D} = {A92E7743-2520-420D-8930-A246A5DDE941}
+	EndGlobalSection
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = CodeCleaner.vsmdi
+	EndGlobalSection
+EndGlobal

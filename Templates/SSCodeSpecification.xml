@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Specification version="1.0">
+  <Targets>
+    <Target BindTo="namespace" MaxBlocksCount="1"></Target>
+    <Target BindTo="interface" Sort="Asc" NameConvention="I[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+" TypeOrderRef="CommonTypeOrder" />
+    <Target BindTo="struct" Sort="Asc" NameConvention="[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+" TypeOrderRef="CommonTypeOrder" />
+    <Target BindTo="class" Sort="Asc" NameConvention="IoC|[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+" RegionsOnly="True" TypeOrderRef="CommonTypeOrder">
+      <Region Name="Classes" Types="Class"></Region>
+      <Region Name="Enums" Types="Enum"></Region>
+      <Region Name="Constants" Types="Const" Modificators="private" NameConvention="[A-Z\d_]+_((DB)*?([A-Z][a-z\d]+)+|[A-Z\d])"></Region>
+      <Region Name="Fields" Types="Field" Modificators="private" AllowFieldAssign="False" NameConvention="_[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+"></Region>
+      <Region Name="Ctors" Types="Constructor, Destructor"></Region>
+      <Region Name="Properties" Types="Property, IndexProperty, DependencyProperty" InnerRegionsOrderRef="CommonModificatorOrder" NameConvention="[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+|[A-Z]"></Region>
+      <Region Name="Methods" Types="Method, Operator" InnerRegionsOrderRef="CommonModificatorOrder" NameConvention="[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+|[A-Z]"></Region>
+      <Region Name="Events" Types="Event, RoutedEvent" Modificators="public, internal, private"></Region>
+      <Region Name="Event Handlers" Types="Method" Modificators="private" NameConvention="[A-Z\d]*?((DB)*?[A-Za-z][a-z\d\-]+)+|[A-Z]"></Region>
+      <Region Name="SomeInterface" Types="Property, IndexProperty, Method, Event" Modificators="public, internal" MaxRepeatCount="*" RegionNameConvention="I[A-Z\d]*?((DB)*?[A-Z][a-z\d]+)+(\&lt;[^\n]+\&gt;)*"></Region>
+    </Target>
+  </Targets>
+  <Orders>
+    <Order Name="CommonModificatorOrder">
+      <Region Name="Public" Modificators="public" />
+      <Region Name="Internal" Modificators="internal, internalprotected" />
+      <Region Name="Protected" Modificators="protected, internalprotected" />
+      <Region Name="Private" Modificators="private" />
+    </Order>
+    <Order Name="CommonTypeOrder">
+      <Region Name="Classes" Types="Class" />
+      <Region Name="Enums" Types="Enum" />
+      <Region Name="Constants" Types="Const" />
+      <Region Name="Fields" Types="Field" />
+      <Region Name="Ctors" Types="Constructor" />
+      <Region Name="Dtors" Types="Destructor" />
+      <Region Name="DependencyProperties" Types="DependencyProperty" />
+      <Region Name="IndexProperties" Types="IndexProperty" />
+      <Region Name="Properties" Types="Property" />
+      <Region Name="Methods" Types="Method" />
+      <Region Name="Operators" Types="Operator" />
+      <Region Name="Events" Types="Event" />
+      <Region Name="RoutedEvents" Types="RoutedEvent" />
+    </Order>
+  </Orders>
+</Specification>

@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{A3EF5A92-3BDB-4466-B33B-D523DADD1F6B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CodeCleaner.Core</RootNamespace>
+    <AssemblyName>CodeCleaner.Core</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Accessibility">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Orygin.Shared.Minimal, Version=2.2.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\External\Orygin.Shared.Minimal.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CodeBlocks\CodeBlockAttribute.cs" />
+    <Compile Include="CodeBlocks\CodeBlockIndexProperty.cs" />
+    <Compile Include="CodeBlocks\CodeBlock.cs" />
+    <Compile Include="CodeBlocks\CodeBlockClass.cs" />
+    <Compile Include="CodeBlocks\CodeBlockConstructor.cs" />
+    <Compile Include="CodeBlocks\CodeBlockDelegate.cs" />
+    <Compile Include="CodeBlocks\CodeBlockField.cs" />
+    <Compile Include="CodeBlocks\CodeBlockMethod.cs" />
+    <Compile Include="CodeBlocks\CodeBlockMethodBase.cs" />
+    <Compile Include="CodeBlocks\CodeBlockPropertyBased.cs" />
+    <Compile Include="CodeBlocks\CodeBlockRegion.cs" />
+    <Compile Include="CodeBlocks\CodeBlockStruct.cs" />
+    <Compile Include="CodeBlocks\CodeBlockInterface.cs" />
+    <Compile Include="CodeBlocks\CodeBlockEnum.cs" />
+    <Compile Include="CodeBlocks\CodeBlockNamespace.cs" />
+    <Compile Include="CodeBlocks\CodeBlockProperty.cs" />
+    <Compile Include="CodeBlocks\CodeBlockOperator.cs" />
+    <Compile Include="CodeBlocks\CodeBlockEvent.cs" />
+    <Compile Include="CodeBlocks\CodeBlockDependencyProperty.cs" />
+    <Compile Include="CodeBlocks\CodeBlockRoutedEvent.cs" />
+    <Compile Include="CodeBlocks\CodeBlockComment.cs" />
+    <Compile Include="CodeBlocks\CodeBlockUsing.cs" />
+    <Compile Include="CodeBlocks\CodeBlockPlainText.cs" />
+    <Compile Include="CodeBlocks\CodeBlockDestructor.cs" />
+    <Compile Include="CodeBlocks\CodeBlockDirective.cs" />
+    <Compile Include="CodeCleanerProject.cs" />
+    <Compile Include="Enums\CodeBlockType.cs" />
+    <Compile Include="CodeCleanerException.cs" />
+    <Compile Include="CodeCleanerManager.cs" />
+    <Compile Include="CodeParser.cs" />
+    <Compile Include="CodeSpecification.cs" />
+    <Compile Include="Enums\IssueType.cs" />
+    <Compile Include="Enums\SortType.cs" />
+    <Compile Include="Enums\BindingType.cs" />
+    <Compile Include="Extentions\StringArrayExtentions.cs" />
+    <Compile Include="Extentions\ExceptionCode.cs" />
+    <Compile Include="FileObserverManager.cs" />
+    <Compile Include="Helpers\PathHelper.cs" />
+    <Compile Include="Helpers\ResourceHelper.cs" />
+    <Compile Include="ICodeCleanerProject.cs" />
+    <Compile Include="ICodeParser.cs" />
+    <Compile Include="ICodeSpecification.cs" />
+    <Compile Include="IFileObserverManager.cs" />
+    <Compile Include="ISpecificationTarget.cs" />
+    <Compile Include="Enums\ModificatorType.cs" />
+    <Compile Include="NewProblemEventArgs.cs" />
+    <Compile Include="ProblemIssue.cs" />
+    <Compile Include="Order.cs" />
+    <Compile Include="Problem.cs" />
+    <Compile Include="NewProgressChangedEventArgs.cs" />
+    <Compile Include="ProgressCompleteEventArgs.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Region.cs" />
+    <Compile Include="Enums\RegionType.cs" />
+    <Compile Include="SpecificationTarget.cs" />
+    <Compile Include="Extentions\StringExtentions.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
